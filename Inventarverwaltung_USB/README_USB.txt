@@ -127,6 +127,13 @@ Gremium, Kategorie und Status werden als Text erkannt, zum Beispiel:
 LEV, KEV Segeberg, Laptop, Drucker, Buch, im Bestand, defekt. Das erkennt
 sowohl "KEV Luebeck" als auch "KEV Lübeck".
 
+Anschaffungsdatum und Garantie bis werden flexibel erkannt: als
+JJJJ-MM-TT (zum Beispiel 2026-06-10), als deutsches Datum TT.MM.JJJJ
+(zum Beispiel 10.06.2026) oder als von Excel erzeugte Seriennummer,
+falls die Spalte in Excel nicht als Datum/Text formatiert war. Der
+Preis wird sowohl mit Komma (899,00) als auch mit Punkt (899.00) und
+mit Tausenderpunkt (1.234,56) als Dezimaltrennzeichen erkannt.
+
 Besitzer werden anhand E-Mail oder Vor-/Nachname vorhandenen Personen
 zugeordnet. Nicht gefundene Besitzer werden nicht automatisch neu angelegt; sie
 werden nach dem Import in der Zusammenfassung gezaehlt.

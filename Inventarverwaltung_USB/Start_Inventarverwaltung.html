@@ -1819,6 +1819,45 @@
       return ["ja", "j", "yes", "true", "1", "x"].includes(normalized(value));
     }
 
+    function parseFlexibleDate(value) {
+      const raw = String(value ?? "").trim();
+      if (!raw) return "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+      const german = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+      if (german) {
+        let [, day, month, year] = german;
+        if (year.length === 2) year = (Number(year) < 70 ? "20" : "19") + year;
+        const iso = `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+        if (!Number.isNaN(new Date(iso).getTime())) return iso;
+      }
+      if (/^\d{4,6}$/.test(raw)) {
+        const serial = Number(raw);
+        if (serial > 20000 && serial < 80000) {
+          const date = new Date((serial - 25569) * 86400 * 1000);
+          if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+        }
+      }
+      return raw;
+    }
+
+    function parseFlexibleNumber(value) {
+      const raw = String(value ?? "").trim();
+      if (!raw) return "";
+      let cleaned = raw.replace(/[^\d,.\-]/g, "");
+      if (!cleaned) return "";
+      const lastComma = cleaned.lastIndexOf(",");
+      const lastDot = cleaned.lastIndexOf(".");
+      if (lastComma > -1 && lastDot > -1) {
+        cleaned = lastComma > lastDot
+          ? cleaned.replace(/\./g, "").replace(",", ".")
+          : cleaned.replace(/,/g, "");
+      } else if (lastComma > -1) {
+        cleaned = cleaned.replace(",", ".");
+      }
+      const num = Number(cleaned);
+      return Number.isFinite(num) ? String(num) : "";
+    }
+
     async function importInventoryCsv(text) {
       const rows = parseCsv(text);
       if (!rows.length) return alert("Die CSV-Datei ist leer.");
@@ -1874,9 +1913,9 @@
           hersteller: values[indexes.hersteller] || "",
           modell: values[indexes.modell] || "",
           seriennummer: values[indexes.seriennummer] || "",
-          anschaffungsdatum: values[indexes.anschaffungsdatum] || "",
-          preis: values[indexes.preis] || "",
-          garantieBis: values[indexes.garantieBis] || "",
+          anschaffungsdatum: parseFlexibleDate(values[indexes.anschaffungsdatum] || ""),
+          preis: parseFlexibleNumber(values[indexes.preis] || ""),
+          garantieBis: parseFlexibleDate(values[indexes.garantieBis] || ""),
           zustand: values[indexes.zustand] || "",
           enthaeltDaten: truthyCsv(values[indexes.enthaeltDaten] || ""),
           notiz: values[indexes.notiz] || ""
