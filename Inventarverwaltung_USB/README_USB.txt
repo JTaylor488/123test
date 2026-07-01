@@ -57,6 +57,10 @@ dauerhaft im Unterordner "dokumente" abgelegt werden - zum Beispiel ein
 unterschriebenes Uebergabeprotokoll als PDF. Jede Datei kann mit einem
 Inventarobjekt, einer Uebergabe und/oder einer Person verknuepft werden.
 
+Die Datei kann entweder per Klick auf das gestrichelte Feld ausgewaehlt
+oder direkt per Drag & Drop aus dem Dateimanager/Explorer/Finder in das
+Feld gezogen werden.
+
 Beim Erfassen einer Uebergabe kann direkt im Formular das zugehoerige
 Uebergabeprotokoll als PDF hochgeladen werden. In der Uebergaben-Tabelle
 erscheint dann ein "Oeffnen"-Knopf, ueber den die Datei jederzeit wieder
@@ -137,13 +141,17 @@ Unter "Berichte" koennen Inventarlisten und Mitgliederlisten erstellt werden.
 Die Auswahl kann fuer alle Gremien, nur LEV, alle Kreiselternvertretungen oder
 ein einzelnes Gremium erfolgen.
 
-Bei Inventarlisten kann "Besitz anzeigen" oder "Besitz ausblenden" gewaehlt
-werden. "Besitz anzeigen" zeigt auch die Person, bei der sich das Inventar
-befindet.
+Unter "Spalten fuer diesen Bericht" kann jede einzelne Spalte per Haekchen
+ein- oder ausgeblendet werden (zum Beispiel Besitz/Person, Hersteller,
+Preis, Notiz ...). "Alle auswaehlen"/"Alle abwaehlen" setzen alle Haekchen
+auf einmal. Die Auswahl gilt fuer Tabelle, CSV-Export und PDF gleichermassen
+und kann beliebig oft und ohne Neuladen der Seite geaendert werden.
 
 "CSV exportieren" erstellt eine CSV-Datei (mit UTF-8-Kennung, damit Excel
-Umlaute korrekt anzeigt). "PDF erstellen" oeffnet eine Druckansicht; dort im
-Browser "Als PDF speichern" waehlen.
+Umlaute korrekt anzeigt). "PDF erstellen" oeffnet eine Druckansicht in einem
+neuen Tab; dort im Browser "Als PDF speichern" waehlen. Bei vielen
+ausgewaehlten Spalten stellt die App automatisch auf Querformat und eine
+kleinere Schrift um, damit die Tabelle immer sauber lesbar bleibt.
 
 iPhone und iPad
 ---------------

@@ -289,6 +289,21 @@
 
     .hidden { display: none !important; }
 
+    .dropzone {
+      border: 2px dashed var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      transition: border-color .15s, background .15s;
+    }
+
+    .dropzone.dragover { border-color: var(--accent); background: var(--soft); color: var(--ink); }
+    .dropzone.has-file { border-style: solid; border-color: var(--accent); background: var(--soft); color: var(--ink); }
+    .dropzone.disabled { cursor: not-allowed; opacity: .6; }
+
     @media (max-width: 900px) {
       .shell { grid-template-columns: 1fr; }
       aside { position: static; }
@@ -898,8 +913,10 @@
               <label>Zustand<input name="zustand" value="${esc(u.zustand)}"></label>
               <label class="check"><input name="unterschriftVon" type="checkbox" ${u.unterschriftVon ? "checked" : ""}> Unterschrift abgebend</label>
               <label class="check"><input name="unterschriftAn" type="checkbox" ${u.unterschriftAn ? "checked" : ""}> Unterschrift empfangend</label>
-              <label class="wide">Übergabeprotokoll als Datei (PDF, optional)<input name="protokollDatei" type="file" accept="application/pdf,image/*" ${dataDirectoryHandle ? "" : "disabled"}></label>
-              ${dataDirectoryHandle ? "" : '<label class="wide" style="align-self:end;color:var(--muted);font-size:12px">Zum Ablegen von Dateien zuerst im Bereich "Datenordner" einen Ordner verbinden.</label>'}
+              <label class="wide">Übergabeprotokoll als Datei (PDF, optional)
+                <div class="dropzone" id="protokollDropzone"></div>
+                <input name="protokollDatei" id="protokollDateiInput" type="file" accept="application/pdf,image/*" class="hidden" ${dataDirectoryHandle ? "" : "disabled"}>
+              </label>
               <label class="full">Zubehör/Notiz<textarea name="notiz">${esc(u.notiz)}</textarea></label>
               <div class="actions">
                 <button class="primary" type="submit">${u.id ? "Änderungen speichern" : "Übergabe speichern"}</button>
@@ -970,7 +987,10 @@
               <label class="wide">Inventar<select name="inventarId">${selectOptions(db.inventar.map(i => ({ id: i.id, name: `${i.inventarNr} - ${i.bezeichnung}` })), "Kein Bezug zu Inventar")}</select></label>
               <label>Übergabe<select name="uebergabeId">${selectOptions(db.uebergaben.map(u => ({ id: u.id, name: `${u.datum} - ${byId(db.inventar, u.inventarId)?.bezeichnung || ""}` })), "Kein Bezug zu Übergabe")}</select></label>
               <label>Person<select name="personId">${selectOptions(db.personen.map(p => ({ id: p.id, name: personName(p.id) })), "Kein Bezug zu Person")}</select></label>
-              <label class="wide">Datei (PDF, Bild ...)<input name="datei" type="file" required></label>
+              <label class="full">Datei (PDF, Bild ...)
+                <div class="dropzone" id="dokumentDropzone"></div>
+                <input name="datei" id="dokumentDateiInput" type="file" class="hidden">
+              </label>
               <label class="full">Notiz<textarea name="notiz"></textarea></label>
               <div class="actions"><button class="primary" type="submit">Datei speichern</button></div>
             </form>
@@ -997,13 +1017,19 @@
               <option value="gremium">Ein Gremium auswählen</option>
             </select>
             <select id="reportGremium">${selectOptions(db.gremien, "Gremium für Bericht")}</select>
-            <select id="reportOwnerMode">
-              <option value="with">Besitz anzeigen</option>
-              <option value="without">Besitz ausblenden</option>
-            </select>
             <input id="reportFilter" placeholder="Suchen">
             <button class="secondary" id="exportReport" type="button">CSV exportieren</button>
             <button class="secondary" id="printReport" type="button">PDF erstellen</button>
+          </div>
+          <div class="notice" style="margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+              <strong>Spalten für diesen Bericht</strong>
+              <div class="actions" style="grid-column:auto;margin:0">
+                <button class="secondary" id="selectAllFields" type="button">Alle auswählen</button>
+                <button class="secondary" id="selectNoFields" type="button">Alle abwählen</button>
+              </div>
+            </div>
+            <div id="reportFields" style="display:flex;flex-wrap:wrap;gap:4px 16px"></div>
           </div>
           <div id="reportTable"></div>
         </div>`;
@@ -1251,6 +1277,7 @@
         const anPerson = document.getElementById("anPersonId");
         vonGremium?.addEventListener("change", () => updatePersonSelectForGremium(vonPerson, vonGremium.value));
         anGremium?.addEventListener("change", () => updatePersonSelectForGremium(anPerson, anGremium.value));
+        setupDropzone(document.getElementById("protokollDropzone"), document.getElementById("protokollDateiInput"), "PDF oder Bild hierher ziehen oder klicken zum Auswählen");
       }
 
       const dokumentForm = document.getElementById("dokumentForm");
@@ -1285,24 +1312,44 @@
           }
         });
         document.getElementById("dokumentFilter").addEventListener("input", renderDokumenteTable);
+        setupDropzone(document.getElementById("dokumentDropzone"), document.getElementById("dokumentDateiInput"), "Datei hierher ziehen oder klicken zum Auswählen");
         renderDokumenteTable();
       }
 
       const reportType = document.getElementById("reportType");
       if (reportType) {
-        reportType.addEventListener("change", renderReportTable);
+        reportType.addEventListener("change", () => {
+          renderReportFieldPicker();
+          renderReportTable();
+        });
         document.getElementById("reportScope").addEventListener("change", renderReportTable);
         document.getElementById("reportGremium").addEventListener("change", () => {
           if (document.getElementById("reportGremium").value) document.getElementById("reportScope").value = "gremium";
           renderReportTable();
         });
-        document.getElementById("reportOwnerMode").addEventListener("change", renderReportTable);
         document.getElementById("reportFilter").addEventListener("input", renderReportTable);
+        document.getElementById("selectAllFields").addEventListener("click", () => {
+          const type = document.getElementById("reportType").value;
+          reportFieldSelection[type] = new Set(ALL_REPORT_FIELDS[type]);
+          renderReportFieldPicker();
+          renderReportTable();
+        });
+        document.getElementById("selectNoFields").addEventListener("click", () => {
+          const type = document.getElementById("reportType").value;
+          reportFieldSelection[type] = new Set();
+          renderReportFieldPicker();
+          renderReportTable();
+        });
         document.getElementById("exportReport").addEventListener("click", () => {
           const report = buildReport();
+          if (!report.headers.length) {
+            alert("Bitte mindestens eine Spalte auswählen, bevor die CSV-Datei erstellt wird.");
+            return;
+          }
           downloadReportCsv(`${report.fileName}.csv`, report);
         });
         document.getElementById("printReport").addEventListener("click", printCurrentReport);
+        renderReportFieldPicker();
         renderReportTable();
       }
 
@@ -1412,28 +1459,47 @@
       return "alle Gremien";
     }
 
-    function inventoryReportRows(scope, selectedGremiumId, includeOwner, query) {
-      return db.inventar.map(item => {
-        const ownership = currentOwnership(item);
-        return { item, ownership, row: currentRows().find(r => Number(r.inventarId) === Number(item.id)) };
-      }).filter(entry => entry.row && reportScopeMatches(entry.ownership.gremiumId, scope, selectedGremiumId))
+    const ALL_REPORT_FIELDS = {
+      inventory: ["Inventar-Nr", "Bezeichnung", "Kategorie", "Status", "Gremium", "Besitz/Person", "Hersteller", "Modell", "Seriennummer", "Anschaffungsdatum", "Preis EUR", "Garantie bis", "Zustand", "Enthält Daten/Datenträger", "Letzte Übergabe", "Protokoll-Nr.", "Protokoll-Ablage", "Protokoll", "Notiz"],
+      members: ["Gremium", "Nachname", "Vorname", "Funktion", "E-Mail", "Telefon", "Notiz"]
+    };
+    const reportFieldSelection = {};
+
+    function ensureReportFieldSelection(type) {
+      if (!reportFieldSelection[type]) {
+        reportFieldSelection[type] = new Set(ALL_REPORT_FIELDS[type]);
+      }
+      return reportFieldSelection[type];
+    }
+
+    function inventoryReportRows(scope, selectedGremiumId, query) {
+      return db.inventar
+        .map(item => ({ item, ownership: currentOwnership(item) }))
+        .filter(entry => reportScopeMatches(entry.ownership.gremiumId, scope, selectedGremiumId))
         .map(entry => {
           const item = entry.item;
-          const row = entry.row;
-          const result = {
-            "Inventar-Nr": row.inventarNr,
-            "Bezeichnung": row.bezeichnung,
-            "Kategorie": row.kategorie,
-            "Status": row.status,
-            "Gremium": row.gremium,
-            "Seriennummer": row.seriennummer,
-            "Zustand": row.zustand,
-            "Anschaffungsdatum": row.anschaffungsdatum,
-            "Garantie bis": row.garantieBis,
-            "Protokoll": row.protokollOk
+          const o = entry.ownership;
+          return {
+            "Inventar-Nr": item.inventarNr || "",
+            "Bezeichnung": item.bezeichnung || "",
+            "Kategorie": categoryName(item.kategorieId),
+            "Status": statusName(item.statusId),
+            "Gremium": gremiumName(o.gremiumId),
+            "Besitz/Person": personName(o.personId),
+            "Hersteller": item.hersteller || "",
+            "Modell": item.modell || "",
+            "Seriennummer": item.seriennummer || "",
+            "Anschaffungsdatum": item.anschaffungsdatum || "",
+            "Preis EUR": item.preis || "",
+            "Garantie bis": item.garantieBis || "",
+            "Zustand": item.zustand || "",
+            "Enthält Daten/Datenträger": item.enthaeltDaten ? "ja" : "nein",
+            "Letzte Übergabe": o.letzteUebergabe || "",
+            "Protokoll-Nr.": o.protokollNr || "",
+            "Protokoll-Ablage": o.protokollAblage || "",
+            "Protokoll": o.protokollOk ? "ja" : "offen",
+            "Notiz": item.notiz || ""
           };
-          if (includeOwner) result["Besitz/Person"] = row.person;
-          return result;
         }).filter(row => Object.values(row).join(" ").toLowerCase().includes(query));
     }
 
@@ -1461,29 +1527,52 @@
       const type = document.getElementById("reportType")?.value || "inventory";
       const scope = document.getElementById("reportScope")?.value || "all";
       const selectedGremiumId = document.getElementById("reportGremium")?.value || "";
-      const includeOwner = (document.getElementById("reportOwnerMode")?.value || "with") === "with";
       const q = (document.getElementById("reportFilter")?.value || "").toLowerCase();
+      const allFields = ALL_REPORT_FIELDS[type];
+      const selectedFields = ensureReportFieldSelection(type);
       const title = `${type === "members" ? "Mitgliederliste" : "Inventarliste"} - ${reportScopeTitle(scope, selectedGremiumId)}`;
-      const rows = type === "members"
+      const fullRows = type === "members"
         ? memberReportRows(scope, selectedGremiumId, q)
-        : inventoryReportRows(scope, selectedGremiumId, includeOwner, q);
+        : inventoryReportRows(scope, selectedGremiumId, q);
+      const headers = allFields.filter(key => selectedFields.has(key));
+      const rows = fullRows.map(fullRow => {
+        const filtered = {};
+        headers.forEach(key => { filtered[key] = fullRow[key]; });
+        return filtered;
+      });
       return {
         title,
         rows,
-        headers: Object.keys(rows[0] || (type === "members"
-          ? { "Gremium": "", "Nachname": "", "Vorname": "", "Funktion": "", "E-Mail": "", "Telefon": "", "Notiz": "" }
-          : includeOwner
-            ? { "Inventar-Nr": "", "Bezeichnung": "", "Kategorie": "", "Status": "", "Gremium": "", "Besitz/Person": "", "Seriennummer": "", "Zustand": "", "Anschaffungsdatum": "", "Garantie bis": "", "Protokoll": "" }
-            : { "Inventar-Nr": "", "Bezeichnung": "", "Kategorie": "", "Status": "", "Gremium": "", "Seriennummer": "", "Zustand": "", "Anschaffungsdatum": "", "Garantie bis": "", "Protokoll": "" })),
+        headers,
         fileName: `${type === "members" ? "mitgliederliste" : "inventarliste"}_${today()}`
       };
     }
 
+    function renderReportFieldPicker() {
+      const el = document.getElementById("reportFields");
+      if (!el) return;
+      const type = document.getElementById("reportType")?.value || "inventory";
+      const allFields = ALL_REPORT_FIELDS[type];
+      const selected = ensureReportFieldSelection(type);
+      el.innerHTML = allFields.map(key => `
+        <label class="check" style="grid-column:auto"><input type="checkbox" data-field-checkbox value="${esc(key)}" ${selected.has(key) ? "checked" : ""}> ${esc(key)}</label>
+      `).join("");
+      el.querySelectorAll("[data-field-checkbox]").forEach(cb => {
+        cb.addEventListener("change", () => {
+          if (cb.checked) selected.add(cb.value); else selected.delete(cb.value);
+          renderReportTable();
+        });
+      });
+    }
+
     function renderReportTable() {
       const report = buildReport();
-      const ownerMode = document.getElementById("reportOwnerMode");
-      if (ownerMode) ownerMode.disabled = document.getElementById("reportType")?.value === "members";
-      document.getElementById("reportTable").innerHTML = table(
+      const el = document.getElementById("reportTable");
+      if (!report.headers.length) {
+        el.innerHTML = `<div class="notice warn">Keine Spalte ausgewählt. Bitte oben mindestens eine Spalte auswählen.</div>`;
+        return;
+      }
+      el.innerHTML = table(
         report.headers,
         report.rows.map(row => report.headers.map(header => row[header]))
       );
@@ -1491,30 +1580,42 @@
 
     function printCurrentReport() {
       const report = buildReport();
+      if (!report.headers.length) {
+        alert("Bitte mindestens eine Spalte auswählen, bevor ein PDF erstellt wird.");
+        return;
+      }
       const htmlRows = report.rows.map(row => `<tr>${report.headers.map(header => `<td>${esc(row[header])}</td>`).join("")}</tr>`).join("");
+      const fontSize = report.headers.length > 14 ? 8 : report.headers.length > 9 ? 9 : 11;
+      const cellPadding = report.headers.length > 14 ? "4px 5px" : "5px 6px";
       const printHtml = `<!doctype html>
         <html lang="de"><head><meta charset="utf-8"><title>${esc(report.title)}</title>
         <style>
+          @page { size: landscape; margin: 12mm; }
+          * { box-sizing: border-box; }
           body { font-family: Arial, sans-serif; color: #1f2724; margin: 24px; }
           h1 { font-size: 20px; margin: 0 0 6px; }
           p { margin: 0 0 16px; color: #61706a; }
-          table { width: 100%; border-collapse: collapse; font-size: 11px; }
-          th, td { border: 1px solid #cfd8d3; padding: 5px 6px; text-align: left; vertical-align: top; }
+          table { width: 100%; border-collapse: collapse; font-size: ${fontSize}px; table-layout: fixed; }
+          th, td { border: 1px solid #cfd8d3; padding: ${cellPadding}; text-align: left; vertical-align: top; overflow-wrap: break-word; word-break: normal; }
           th { background: #eef3f0; }
-          @media print { body { margin: 12mm; } }
+          thead { display: table-header-group; }
+          tr { break-inside: avoid; }
+          @media print { body { margin: 0; } }
         </style></head><body>
         <h1>${esc(report.title)}</h1>
         <p>Stand: ${today()} - ${report.rows.length} Einträge</p>
         <table><thead><tr>${report.headers.map(header => `<th>${esc(header)}</th>`).join("")}</tr></thead><tbody>${htmlRows || `<tr><td colspan="${report.headers.length}">Keine Einträge vorhanden.</td></tr>`}</tbody></table>
         <script>window.onload = () => window.print();<\/script>
         </body></html>`;
-      const printWindow = window.open("", "_blank");
+      const blob = new Blob([printHtml], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const printWindow = window.open(url, "_blank");
       if (!printWindow) {
         alert("Das PDF-Fenster konnte nicht geöffnet werden. Bitte Popups für diese Datei erlauben.");
+        URL.revokeObjectURL(url);
         return;
       }
-      printWindow.document.write(printHtml);
-      printWindow.document.close();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     }
 
     function downloadBlob(name, blob) {
@@ -1954,6 +2055,44 @@
 
     function sanitizeFilename(name) {
       return String(name).replace(/[\\/:*?"<>|]+/g, "_").slice(0, 120);
+    }
+
+    function setupDropzone(zoneEl, inputEl, placeholder) {
+      if (!zoneEl || !inputEl) return;
+      if (inputEl.disabled) {
+        zoneEl.classList.add("disabled");
+        zoneEl.textContent = 'Zum Ablegen von Dateien zuerst im Bereich "Datenordner" einen Ordner verbinden.';
+        return;
+      }
+      const updateLabel = () => {
+        const file = inputEl.files && inputEl.files[0];
+        zoneEl.classList.toggle("has-file", Boolean(file));
+        zoneEl.textContent = file ? `Ausgewählt: ${file.name}` : placeholder;
+      };
+      zoneEl.addEventListener("click", () => inputEl.click());
+      inputEl.addEventListener("change", updateLabel);
+      ["dragenter", "dragover"].forEach(evt => zoneEl.addEventListener(evt, event => {
+        event.preventDefault();
+        event.stopPropagation();
+        zoneEl.classList.add("dragover");
+      }));
+      ["dragleave", "dragend"].forEach(evt => zoneEl.addEventListener(evt, event => {
+        event.preventDefault();
+        event.stopPropagation();
+        zoneEl.classList.remove("dragover");
+      }));
+      zoneEl.addEventListener("drop", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        zoneEl.classList.remove("dragover");
+        const file = event.dataTransfer?.files?.[0];
+        if (!file) return;
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        inputEl.files = dt.files;
+        updateLabel();
+      });
+      updateLabel();
     }
 
     async function storeDocumentFile(file) {
