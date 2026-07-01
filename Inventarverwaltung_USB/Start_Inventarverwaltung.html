@@ -1,0 +1,2140 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventarverwaltung LEV/KEV</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --panel: #ffffff;
+      --ink: #1f2724;
+      --muted: #61706a;
+      --line: #d9dfda;
+      --accent: #0c6b62;
+      --accent-2: #b94b36;
+      --soft: #e8f2ef;
+      --warn: #fff2d8;
+      --bad: #ffe4dd;
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 245px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      background: #1f2b28;
+      color: white;
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .brand {
+      padding: 8px 8px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.16);
+    }
+
+    .brand h1 {
+      margin: 0 0 4px;
+      font-size: 19px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: rgba(255,255,255,.72);
+      font-size: 13px;
+    }
+
+    nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    nav button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: rgba(255,255,255,.84);
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font: inherit;
+    }
+
+    nav button.active,
+    nav button:hover {
+      background: rgba(255,255,255,.12);
+      color: white;
+    }
+
+    main {
+      min-width: 0;
+      padding: 18px 22px 32px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .span-4 { grid-column: span 4; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .span-7 { grid-column: span 7; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 92px;
+      justify-content: center;
+    }
+
+    .metric strong {
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .metric span { color: var(--muted); }
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      grid-column: span 4;
+      min-width: 0;
+    }
+
+    label.wide { grid-column: span 8; }
+    label.full { grid-column: span 12; }
+    label.check {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: white;
+      color: var(--ink);
+      padding: 9px 10px;
+      font: inherit;
+    }
+
+    textarea { min-height: 82px; resize: vertical; }
+    input[type="checkbox"] { width: auto; }
+
+    .actions {
+      grid-column: span 12;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-start;
+      margin-top: 2px;
+    }
+
+    button.primary,
+    button.secondary,
+    button.danger {
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font: inherit;
+      cursor: pointer;
+      min-height: 38px;
+    }
+
+    button.primary { background: var(--accent); color: white; }
+    button.secondary { background: white; color: var(--ink); border-color: var(--line); }
+    button.danger { background: var(--bad); color: #792b20; border-color: #f5b6a8; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      background: #fbfcfa;
+      position: sticky;
+      top: 0;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 56vh;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .toolbar input,
+    .toolbar select {
+      max-width: 260px;
+    }
+
+    .notice {
+      background: var(--soft);
+      border: 1px solid #bfd9d2;
+      border-radius: var(--radius);
+      padding: 12px;
+      color: #23413c;
+      line-height: 1.45;
+    }
+
+    .warn {
+      background: var(--warn);
+      border-color: #f0d08b;
+      color: #6a4a0f;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { position: static; }
+      nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      main { padding: 16px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .span-4, .span-5, .span-6, .span-7, .span-8 { grid-column: span 12; }
+      label, label.wide { grid-column: span 12; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <h1>Inventarverwaltung</h1>
+        <p>LEV und Kreiselternvertretungen</p>
+      </div>
+      <nav id="nav"></nav>
+      <div class="pill" id="fileStatus">Kein Datenordner verbunden</div>
+      <div id="folderStatus"></div>
+    </aside>
+    <main>
+      <header>
+        <h2 id="viewTitle">Dashboard</h2>
+        <div class="statusbar">
+          <span class="pill" id="dirtyStatus">Gespeichert</span>
+          <button class="secondary" id="loadBtn" type="button">Datei importieren</button>
+          <button class="secondary" id="saveAsBtn" type="button">Kopie speichern unter</button>
+          <button class="primary" id="saveBtn" type="button">Speichern</button>
+        </div>
+      </header>
+      <section id="view"></section>
+    </main>
+  </div>
+
+  <input class="hidden" id="fileInput" type="file" accept="application/json,.json">
+  <input class="hidden" id="personImportInput" type="file" accept=".csv,text/csv">
+  <input class="hidden" id="inventoryImportInput" type="file" accept=".csv,text/csv">
+
+  <script>
+    const today = () => new Date().toISOString().slice(0, 10);
+    const uid = () => Math.random().toString(36).slice(2, 9);
+
+    const IDB_NAME = "inventarverwaltung-fs";
+    const IDB_STORE = "handles";
+    const SNAPSHOT_PREFIX = "inventar_daten_";
+
+    const seedGremien = [
+      { id: 1, typ: "LEV", name: "Landeselternvertretung", kurz: "LEV", region: "Land", aktiv: true },
+      { id: 2, typ: "KEV", name: "Kreiselternvertretung Kreis Dithmarschen", kurz: "KEV Dithmarschen", region: "Kreis Dithmarschen", aktiv: true },
+      { id: 3, typ: "KEV", name: "Kreiselternvertretung Stadt Flensburg", kurz: "KEV Flensburg", region: "Kreisfreie Stadt Flensburg", aktiv: true },
+      { id: 4, typ: "KEV", name: "Kreiselternvertretung Kreis Herzogtum Lauenburg", kurz: "KEV Herzogtum Lauenburg", region: "Kreis Herzogtum Lauenburg", aktiv: true },
+      { id: 5, typ: "KEV", name: "Kreiselternvertretung Landeshauptstadt Kiel", kurz: "KEV Kiel", region: "Kreisfreie Stadt Kiel", aktiv: true },
+      { id: 6, typ: "KEV", name: "Kreiselternvertretung Hansestadt Lübeck", kurz: "KEV Lübeck", region: "Kreisfreie Stadt Lübeck", aktiv: true },
+      { id: 7, typ: "KEV", name: "Kreiselternvertretung Stadt Neumünster", kurz: "KEV Neumünster", region: "Kreisfreie Stadt Neumünster", aktiv: true },
+      { id: 8, typ: "KEV", name: "Kreiselternvertretung Kreis Nordfriesland", kurz: "KEV Nordfriesland", region: "Kreis Nordfriesland", aktiv: true },
+      { id: 9, typ: "KEV", name: "Kreiselternvertretung Kreis Ostholstein", kurz: "KEV Ostholstein", region: "Kreis Ostholstein", aktiv: true },
+      { id: 10, typ: "KEV", name: "Kreiselternvertretung Kreis Pinneberg", kurz: "KEV Pinneberg", region: "Kreis Pinneberg", aktiv: true },
+      { id: 11, typ: "KEV", name: "Kreiselternvertretung Kreis Plön", kurz: "KEV Plön", region: "Kreis Plön", aktiv: true },
+      { id: 12, typ: "KEV", name: "Kreiselternvertretung Kreis Rendsburg-Eckernförde", kurz: "KEV Rendsburg-Eckernförde", region: "Kreis Rendsburg-Eckernförde", aktiv: true },
+      { id: 13, typ: "KEV", name: "Kreiselternvertretung Kreis Schleswig-Flensburg", kurz: "KEV Schleswig-Flensburg", region: "Kreis Schleswig-Flensburg", aktiv: true },
+      { id: 14, typ: "KEV", name: "Kreiselternvertretung Kreis Segeberg", kurz: "KEV Segeberg", region: "Kreis Segeberg", aktiv: true },
+      { id: 15, typ: "KEV", name: "Kreiselternvertretung Kreis Steinburg", kurz: "KEV Steinburg", region: "Kreis Steinburg", aktiv: true },
+      { id: 16, typ: "KEV", name: "Kreiselternvertretung Kreis Stormarn", kurz: "KEV Stormarn", region: "Kreis Stormarn", aktiv: true },
+      { id: 17, typ: "KEV", name: "Kreiselternvertretung Stadt Norderstedt", kurz: "KEV Norderstedt", region: "Stadt Norderstedt", aktiv: true }
+    ];
+
+    const defaults = () => ({
+      meta: {
+        name: "Inventarverwaltung LEV/KEV",
+        createdAt: today(),
+        updatedAt: today(),
+        version: 2
+      },
+      status: [
+        { id: 1, name: "im Bestand", aktiv: true },
+        { id: 2, name: "übergeben", aktiv: true },
+        { id: 3, name: "in Wartung", aktiv: true },
+        { id: 4, name: "defekt", aktiv: true },
+        { id: 5, name: "ausgesondert", aktiv: false },
+        { id: 6, name: "verloren", aktiv: false }
+      ],
+      kategorien: [
+        { id: 1, name: "Laptop" },
+        { id: 2, name: "Drucker" },
+        { id: 3, name: "Buch" },
+        { id: 4, name: "Zubehör" },
+        { id: 5, name: "Präsentation" },
+        { id: 6, name: "Software/Lizenz" },
+        { id: 7, name: "Sonstiges" }
+      ],
+      gremien: seedGremien,
+      personen: [],
+      inventar: [],
+      anschaffungen: [],
+      uebergaben: [],
+      dokumente: [],
+      wartung: [],
+      aussonderung: []
+    });
+
+    const iphoneMode = new URLSearchParams(window.location?.search || "").has("iphone");
+    const iphoneStorageKey = "inventarverwaltung-lev-kev";
+
+    let db = defaults();
+    let currentView = "dashboard";
+    let dirty = false;
+    let fileName = "";
+    let dataDirectoryHandle = null;
+    let pendingDirectoryHandle = null;
+    let activeSnapshotName = null;
+    let autosaveEnabled = true;
+    let editing = {
+      inventarId: null,
+      personId: null,
+      uebergabeId: null
+    };
+
+    const views = [
+      ["dashboard", "Dashboard"],
+      ["inventar", "Inventar"],
+      ["personen", "Personen"],
+      ["uebergabe", "Übergaben"],
+      ["dokumente", "Dokumente"],
+      ["berichte", "Berichte"],
+      ["stamm", "Stammdaten"],
+      ["sicherung", "Datenordner"]
+    ];
+
+    function nextId(list) {
+      return list.reduce((max, row) => Math.max(max, Number(row.id || 0)), 0) + 1;
+    }
+
+    function byId(list, id) {
+      return list.find(row => Number(row.id) === Number(id));
+    }
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[ch]));
+    }
+
+    function raw(value) {
+      return { raw: value };
+    }
+
+    function markDirty() {
+      dirty = true;
+      db.meta.updatedAt = today();
+      renderStatus();
+    }
+
+    function renderStatus() {
+      document.getElementById("dirtyStatus").textContent = dirty ? "Nicht gespeichert" : "Gespeichert";
+      document.getElementById("fileStatus").textContent = iphoneMode
+        ? "iPhone-Modus"
+        : dataDirectoryHandle
+          ? `Ordner: ${dataDirectoryHandle.name}`
+          : fileName
+            ? `Datei: ${fileName}`
+            : "Kein Datenordner verbunden";
+
+      const folderStatusEl = document.getElementById("folderStatus");
+      if (!folderStatusEl) return;
+      if (iphoneMode || !window.showDirectoryPicker) {
+        folderStatusEl.innerHTML = "";
+        return;
+      }
+      if (pendingDirectoryHandle) {
+        folderStatusEl.innerHTML = `<button class="primary" id="confirmFolderAccessBtn" type="button" style="width:100%">Zugriff bestätigen</button>`;
+        document.getElementById("confirmFolderAccessBtn").addEventListener("click", confirmFolderAccess);
+      } else if (!dataDirectoryHandle) {
+        folderStatusEl.innerHTML = `<button class="secondary" id="quickConnectBtn" type="button" style="width:100%">Datenordner auswählen</button>`;
+        document.getElementById("quickConnectBtn").addEventListener("click", () => connectDataFolder());
+      } else {
+        folderStatusEl.innerHTML = "";
+      }
+    }
+
+    function selectOptions(list, label, selected = "") {
+      return `<option value="">${label}</option>` + list.map(row => (
+        `<option value="${row.id}" ${Number(selected) === Number(row.id) ? "selected" : ""}>${esc(row.name || row.kurz || row.nachname)}</option>`
+      )).join("");
+    }
+
+    function normalized(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function foldGerman(value) {
+      return normalized(value)
+        .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss");
+    }
+
+    function personName(id) {
+      const p = byId(db.personen, id);
+      return p ? `${p.nachname || ""}, ${p.vorname || ""}`.replace(/, $/, "") : "";
+    }
+
+    function gremiumName(id) {
+      const g = byId(db.gremien, id);
+      return g ? `${g.kurz || g.typ}: ${g.name}` : "";
+    }
+
+    function categoryName(id) {
+      return byId(db.kategorien, id)?.name || "";
+    }
+
+    function statusName(id) {
+      return byId(db.status, id)?.name || "";
+    }
+
+    function inventoryPrefix(gremiumId) {
+      const gremium = byId(db.gremien, gremiumId);
+      if (!gremium) return "INV";
+      if (gremium.typ === "LEV") return "LEV";
+      const source = String(gremium.kurz || gremium.name || "KEV")
+        .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+        .replace(/^KEV\s*/i, "KEV-")
+        .replace(/[^A-Za-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toUpperCase();
+      return source || "KEV";
+    }
+
+    function generateInventoryNumber(gremiumId) {
+      const year = new Date().getFullYear();
+      const prefix = `${inventoryPrefix(gremiumId)}-${year}`;
+      const usedNumbers = db.inventar
+        .map(item => String(item.inventarNr || ""))
+        .filter(value => value.startsWith(`${prefix}-`))
+        .map(value => Number(value.split("-").pop()))
+        .filter(Number.isFinite);
+      const nextNumber = Math.max(0, ...usedNumbers) + 1;
+      return `${prefix}-${String(nextNumber).padStart(4, "0")}`;
+    }
+
+    function personMemberships(personId) {
+      return (db.mitgliedschaften || []).filter(m => Number(m.personId) === Number(personId) && m.aktiv !== false);
+    }
+
+    function personIsInGremium(personId, gremiumId) {
+      if (!gremiumId) return true;
+      return personMemberships(personId).some(m => Number(m.gremiumId) === Number(gremiumId));
+    }
+
+    function personSelectListForGremium(gremiumId, selectedPersonId = "") {
+      const rows = db.personen
+        .filter(p => personIsInGremium(p.id, gremiumId) || Number(p.id) === Number(selectedPersonId))
+        .map(p => ({ id: p.id, name: personName(p.id) }));
+      return selectOptions(rows, gremiumId ? "Person im Gremium" : "Person", selectedPersonId);
+    }
+
+    function findGremiumByText(value) {
+      const wanted = foldGerman(value);
+      if (!wanted) return null;
+      return db.gremien.find(g => [g.kurz, g.name, g.region].some(part => foldGerman(part) === wanted))
+        || db.gremien.find(g => [g.kurz, g.name, g.region].some(part => foldGerman(part).includes(wanted) || wanted.includes(foldGerman(part))));
+    }
+
+    function findCategoryByText(value) {
+      const wanted = foldGerman(value);
+      if (!wanted) return null;
+      return db.kategorien.find(k => foldGerman(k.name) === wanted)
+        || db.kategorien.find(k => foldGerman(k.name).includes(wanted) || wanted.includes(foldGerman(k.name)));
+    }
+
+    function findStatusByText(value) {
+      const wanted = foldGerman(value);
+      if (!wanted) return byId(db.status, 1);
+      return db.status.find(s => foldGerman(s.name) === wanted)
+        || db.status.find(s => foldGerman(s.name).includes(wanted) || wanted.includes(foldGerman(s.name)))
+        || byId(db.status, 1);
+    }
+
+    function findPersonByImport(vorname, nachname, email) {
+      const mail = normalized(email);
+      if (mail) {
+        const byMail = db.personen.find(p => normalized(p.email) === mail);
+        if (byMail) return byMail;
+      }
+      const first = normalized(vorname);
+      const last = normalized(nachname);
+      if (!last) return null;
+      return db.personen.find(p => normalized(p.nachname) === last && (!first || normalized(p.vorname) === first)) || null;
+    }
+
+    function latestHandover(inventarId) {
+      return db.uebergaben
+        .filter(row => Number(row.inventarId) === Number(inventarId))
+        .sort((a, b) => String(b.datum || "").localeCompare(String(a.datum || "")) || Number(b.id) - Number(a.id))[0];
+    }
+
+    function currentOwnership(item) {
+      const u = latestHandover(item.id);
+      return {
+        gremiumId: u?.anGremiumId || item.gremiumId || "",
+        personId: u?.anPersonId || item.personId || "",
+        letzteUebergabe: u?.datum || "",
+        protokollNr: u?.protokollNr || "",
+        protokollAblage: u?.protokollAblage || "",
+        protokollOk: u ? Boolean(u.unterschriftVon && u.unterschriftAn && u.protokollAblage) : true
+      };
+    }
+
+    function currentRows() {
+      return db.inventar.map(item => {
+        const o = currentOwnership(item);
+        return {
+          inventarNr: item.inventarNr,
+          inventarId: item.id,
+          bezeichnung: item.bezeichnung,
+          kategorie: categoryName(item.kategorieId),
+          status: statusName(item.statusId),
+          gremium: gremiumName(o.gremiumId),
+          person: personName(o.personId),
+          seriennummer: item.seriennummer || "",
+          anschaffungsdatum: item.anschaffungsdatum || "",
+          garantieBis: item.garantieBis || "",
+          letzteUebergabe: o.letzteUebergabe,
+          protokollNr: o.protokollNr,
+          protokollAblage: o.protokollAblage,
+          protokollOk: o.protokollOk ? "ja" : "offen",
+          datentraeger: item.enthaeltDaten ? "ja" : "nein",
+          zustand: item.zustand || "",
+          notiz: item.notiz || ""
+        };
+      });
+    }
+
+    function renderNav() {
+      document.getElementById("nav").innerHTML = views.map(([id, title]) =>
+        `<button type="button" class="${id === currentView ? "active" : ""}" data-view="${id}">${title}</button>`
+      ).join("");
+      document.querySelectorAll("[data-view]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          currentView = btn.dataset.view;
+          render();
+        });
+      });
+    }
+
+    function render() {
+      renderNav();
+      renderStatus();
+      document.getElementById("viewTitle").textContent = views.find(v => v[0] === currentView)?.[1] || "";
+      const target = document.getElementById("view");
+      target.innerHTML = ({
+        dashboard: viewDashboard,
+        inventar: viewInventar,
+        personen: viewPersonen,
+        uebergabe: viewUebergabe,
+        dokumente: viewDokumente,
+        berichte: viewBerichte,
+        stamm: viewStamm,
+        sicherung: viewSicherung
+      }[currentView] || viewDashboard)();
+      target.onclick = handleViewClick;
+      bindView();
+    }
+
+    function handleViewClick(event) {
+      const button = event.target.closest?.("[data-edit-inventar], [data-edit-person], [data-edit-uebergabe], [data-delete-inventar], [data-delete-person], [data-delete-uebergabe], [data-open-doc], [data-delete-doc], [data-open-snapshot]");
+      if (!button) return;
+      if (button.dataset.editInventar) {
+        editing.inventarId = Number(button.dataset.editInventar);
+        render();
+        document.getElementById("inventarForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (button.dataset.editPerson) {
+        editing.personId = Number(button.dataset.editPerson);
+        render();
+        document.getElementById("personForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (button.dataset.editUebergabe) {
+        editing.uebergabeId = Number(button.dataset.editUebergabe);
+        render();
+        document.getElementById("uebergabeForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (button.dataset.deleteInventar) {
+        deleteInventar(Number(button.dataset.deleteInventar));
+      } else if (button.dataset.deletePerson) {
+        deletePerson(Number(button.dataset.deletePerson));
+      } else if (button.dataset.deleteUebergabe) {
+        deleteUebergabe(Number(button.dataset.deleteUebergabe));
+      } else if (button.dataset.openDoc) {
+        openDocument(byId(db.dokumente, Number(button.dataset.openDoc)));
+      } else if (button.dataset.deleteDoc) {
+        deleteDocument(Number(button.dataset.deleteDoc));
+      } else if (button.dataset.openSnapshot) {
+        openSnapshot(button.dataset.openSnapshot);
+      }
+    }
+
+    function table(headers, rows) {
+      return `<div class="table-wrap"><table><thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${
+        rows.length ? rows.map(row => `<tr>${row.map(cell => `<td>${cell && cell.raw !== undefined ? cell.raw : esc(cell)}</td>`).join("")}</tr>`).join("") :
+        `<tr><td colspan="${headers.length}">Keine Einträge vorhanden.</td></tr>`
+      }</tbody></table></div>`;
+    }
+
+    function editButton(type, id) {
+      return raw(`<button class="secondary" type="button" data-edit-${type}="${id}">Bearbeiten</button>`);
+    }
+
+    function deleteButton(type, id) {
+      return raw(`<button class="danger" type="button" data-delete-${type}="${id}">Löschen</button>`);
+    }
+
+    function actionButtons(type, id) {
+      return raw(`${editButton(type, id).raw} ${deleteButton(type, id).raw}`);
+    }
+
+    function primaryMembership(personId) {
+      return (db.mitgliedschaften || []).find(m => Number(m.personId) === Number(personId)) || {};
+    }
+
+    function applyOfficialGremien() {
+      const existing = new Map((db.gremien || []).map(row => [Number(row.id), row]));
+      const lev = existing.get(1) || seedGremien[0];
+      db.gremien = [
+        { ...seedGremien[0], ...lev, id: 1 },
+        ...seedGremien.slice(1).map(row => ({ ...row, aktiv: existing.get(row.id)?.aktiv ?? row.aktiv }))
+      ];
+    }
+
+    function itemAllowsPersonDeletion(item) {
+      const status = normalized(statusName(item.statusId));
+      const category = normalized(categoryName(item.kategorieId));
+      const stateText = normalized([item.zustand, item.notiz].join(" "));
+      return status.includes("defekt")
+        || stateText.includes("defekt")
+        || (category.includes("buch") && stateText.includes("veraltet"));
+    }
+
+    async function persistChange() {
+      markDirty();
+      await saveData({ silent: true });
+      render();
+    }
+
+    async function removeDocumentFiles(docs) {
+      if (!dataDirectoryHandle || !docs.length) return;
+      try {
+        const docDir = await dataDirectoryHandle.getDirectoryHandle("dokumente", { create: true });
+        for (const doc of docs) {
+          try { await docDir.removeEntry(doc.dateiname); } catch {}
+        }
+      } catch {}
+    }
+
+    async function deleteInventar(id) {
+      const item = byId(db.inventar, id);
+      if (!item) return;
+      if (!confirm(`Inventar "${item.inventarNr || item.bezeichnung}" wirklich löschen? Zugehörige Übergaben, Nachweise und Dokumente werden ebenfalls entfernt.`)) return;
+      const docsToRemove = (db.dokumente || []).filter(d => Number(d.inventarId) === Number(id));
+      db.inventar = db.inventar.filter(row => Number(row.id) !== Number(id));
+      db.anschaffungen = (db.anschaffungen || []).filter(row => Number(row.inventarId) !== Number(id));
+      db.uebergaben = db.uebergaben.filter(row => Number(row.inventarId) !== Number(id));
+      db.dokumente = (db.dokumente || []).filter(row => Number(row.inventarId) !== Number(id));
+      db.wartung = (db.wartung || []).filter(row => Number(row.inventarId) !== Number(id));
+      db.aussonderung = (db.aussonderung || []).filter(row => Number(row.inventarId) !== Number(id));
+      if (Number(editing.inventarId) === Number(id)) editing.inventarId = null;
+      await removeDocumentFiles(docsToRemove);
+      await persistChange();
+    }
+
+    async function deletePerson(id) {
+      const person = byId(db.personen, id);
+      if (!person) return;
+      const blockingItems = db.inventar.filter(item => Number(currentOwnership(item).personId) === Number(id) && !itemAllowsPersonDeletion(item));
+      if (blockingItems.length) {
+        alert(`Person "${personName(id)}" kann nicht gelöscht werden, weil noch Inventar im Besitz dieser Person ist:\n\n${blockingItems.map(item => `${item.inventarNr || ""} ${item.bezeichnung || ""}`.trim()).join("\n")}\n\nBitte zuerst übergeben oder als defekt markieren. Bei Büchern reicht Zustand/Notiz "veraltet".`);
+        return;
+      }
+      if (!confirm(`Person "${personName(id)}" wirklich löschen? Gremienzuordnungen werden entfernt; vorhandene Personenverweise werden geleert.`)) return;
+      db.personen = db.personen.filter(row => Number(row.id) !== Number(id));
+      db.mitgliedschaften = (db.mitgliedschaften || []).filter(row => Number(row.personId) !== Number(id));
+      db.inventar = db.inventar.map(row => Number(row.personId) === Number(id) ? { ...row, personId: "" } : row);
+      db.uebergaben = db.uebergaben.map(row => ({
+        ...row,
+        vonPersonId: Number(row.vonPersonId) === Number(id) ? "" : row.vonPersonId,
+        anPersonId: Number(row.anPersonId) === Number(id) ? "" : row.anPersonId
+      }));
+      if (Number(editing.personId) === Number(id)) editing.personId = null;
+      await persistChange();
+    }
+
+    async function deleteUebergabe(id) {
+      const row = byId(db.uebergaben, id);
+      if (!row) return;
+      if (!confirm(`Übergabe vom ${row.datum || "unbekannten Datum"} wirklich löschen? Angehängte Dokumente werden ebenfalls entfernt.`)) return;
+      const docsToRemove = (db.dokumente || []).filter(d => Number(d.uebergabeId) === Number(id));
+      db.uebergaben = db.uebergaben.filter(entry => Number(entry.id) !== Number(id));
+      db.dokumente = (db.dokumente || []).filter(entry => Number(entry.uebergabeId) !== Number(id));
+      if (Number(editing.uebergabeId) === Number(id)) editing.uebergabeId = null;
+      await removeDocumentFiles(docsToRemove);
+      await persistChange();
+    }
+
+    function viewDashboard() {
+      const rows = currentRows();
+      const openProtocols = rows.filter(r => r.protokollOk === "offen").length;
+      const dataItems = rows.filter(r => r.datentraeger === "ja").length;
+      return `
+        <div class="grid">
+          <div class="panel metric span-4"><strong>${db.inventar.length}</strong><span>Inventarobjekte</span></div>
+          <div class="panel metric span-4"><strong>${db.personen.length}</strong><span>Personen</span></div>
+          <div class="panel metric span-4"><strong>${openProtocols}</strong><span>Offene Protokolle</span></div>
+          <div class="panel span-8">
+            <h3>Tagesaktuelle Besitzliste</h3>
+            ${table(["Inventar-Nr", "Bezeichnung", "Gremium", "Person", "Protokoll"], rows.slice(0, 12).map(r => [r.inventarNr, r.bezeichnung, r.gremium, r.person, r.protokollOk]))}
+          </div>
+          <div class="panel span-4">
+            <h3>Datenschutz</h3>
+            <div class="notice ${dataItems ? "warn" : ""}">${dataItems} Inventarobjekte sind als Datenträger oder datenhaltig markiert.</div>
+          </div>
+        </div>`;
+    }
+
+    function viewInventar() {
+      const item = byId(db.inventar, editing.inventarId) || {};
+      return `
+        <div class="grid">
+          <div class="panel span-12">
+            <h3>${item.id ? "Inventar bearbeiten" : "Inventar erfassen"}</h3>
+            <form id="inventarForm">
+              <label>Inventar-Nr.<input name="inventarNr" placeholder="wird automatisch vergeben" value="${esc(item.inventarNr)}"></label>
+              <label class="wide">Bezeichnung<input name="bezeichnung" required placeholder="Laptop, Drucker, Buch ..." value="${esc(item.bezeichnung)}"></label>
+              <label>Kategorie<select name="kategorieId">${selectOptions(db.kategorien, "Kategorie", item.kategorieId)}</select></label>
+              <label>Status<select name="statusId">${selectOptions(db.status, "Status", item.statusId || 1)}</select></label>
+              <label>Gremium<select name="gremiumId">${selectOptions(db.gremien, "Gremium", item.gremiumId)}</select></label>
+              <label>Person<select name="personId">${selectOptions(db.personen.map(p => ({ id: p.id, name: personName(p.id) })), "Person", item.personId)}</select></label>
+              <label>Hersteller<input name="hersteller" value="${esc(item.hersteller)}"></label>
+              <label>Modell<input name="modell" value="${esc(item.modell)}"></label>
+              <label>Seriennummer<input name="seriennummer" value="${esc(item.seriennummer)}"></label>
+              <label>Anschaffungsdatum<input name="anschaffungsdatum" type="date" value="${esc(item.anschaffungsdatum)}"></label>
+              <label>Preis EUR<input name="preis" type="number" min="0" step="0.01" value="${esc(item.preis)}"></label>
+              <label>Garantie bis<input name="garantieBis" type="date" value="${esc(item.garantieBis)}"></label>
+              <label>Zustand<input name="zustand" placeholder="neu, gut, gebraucht" value="${esc(item.zustand)}"></label>
+              <label class="check"><input name="enthaeltDaten" type="checkbox" ${item.enthaeltDaten ? "checked" : ""}> Enthält Daten/Datenträger</label>
+              <label class="full">Notiz<textarea name="notiz">${esc(item.notiz)}</textarea></label>
+              <div class="actions">
+                <button class="primary" type="submit">${item.id ? "Änderungen speichern" : "Inventar speichern"}</button>
+                ${item.id ? '<button class="secondary" id="cancelInventarEdit" type="button">Abbrechen</button>' : ""}
+              </div>
+            </form>
+          </div>
+          <div class="panel span-12">
+            <div class="toolbar">
+              <input id="inventarFilter" placeholder="Inventar suchen">
+              <button class="secondary" id="downloadInventoryTemplate" type="button">CSV-Vorlage</button>
+              <button class="secondary" id="importInventoryBtn" type="button">Inventarliste laden</button>
+              <button class="secondary" id="exportInventar" type="button">CSV exportieren</button>
+            </div>
+            <div id="inventarTable"></div>
+          </div>
+        </div>`;
+    }
+
+    function viewPersonen() {
+      const person = byId(db.personen, editing.personId) || {};
+      const selectedMembershipIds = person.id ? personMemberships(person.id).map(m => Number(m.gremiumId)) : [];
+      return `
+        <div class="grid">
+          <div class="panel span-5">
+            <h3>${person.id ? "Person bearbeiten" : "Person erfassen"}</h3>
+            <form id="personForm">
+              <label>Vorname<input name="vorname" value="${esc(person.vorname)}"></label>
+              <label>Nachname<input name="nachname" required value="${esc(person.nachname)}"></label>
+              <label class="wide">E-Mail<input name="email" type="email" value="${esc(person.email)}"></label>
+              <label>Telefon<input name="telefon" value="${esc(person.telefon)}"></label>
+              <label class="wide">Gremien<select name="gremiumIds" multiple size="6">${db.gremien.map(g => `<option value="${g.id}" ${selectedMembershipIds.includes(Number(g.id)) ? "selected" : ""}>${esc(g.kurz)} - ${esc(g.name)}</option>`).join("")}</select></label>
+              <label>Funktion<input name="funktion" placeholder="Vorsitz, Mitglied ..." value="${esc(primaryMembership(person.id).funktion)}"></label>
+              <label class="full">Adresse/Notiz<textarea name="notiz">${esc(person.notiz)}</textarea></label>
+              <div class="actions">
+                <button class="primary" type="submit">${person.id ? "Änderungen speichern" : "Person speichern"}</button>
+                ${person.id ? '<button class="secondary" id="cancelPersonEdit" type="button">Abbrechen</button>' : ""}
+              </div>
+            </form>
+          </div>
+          <div class="panel span-7">
+            <div class="toolbar">
+              <input id="personFilter" placeholder="Person suchen">
+              <button class="secondary" id="downloadPersonTemplate" type="button">CSV-Vorlage</button>
+              <button class="secondary" id="importPersonsBtn" type="button">Personenliste laden</button>
+            </div>
+            <div id="personenTable"></div>
+          </div>
+        </div>`;
+    }
+
+    function viewUebergabe() {
+      const u = byId(db.uebergaben, editing.uebergabeId) || {};
+      return `
+        <div class="grid">
+          <div class="panel span-12">
+            <h3>${u.id ? "Übergabe bearbeiten" : "Übergabe erfassen"}</h3>
+            <form id="uebergabeForm">
+              <label class="wide">Inventar<select name="inventarId" required>${selectOptions(db.inventar.map(i => ({ id: i.id, name: `${i.inventarNr} - ${i.bezeichnung}` })), "Inventar", u.inventarId)}</select></label>
+              <label>Datum<input name="datum" type="date" value="${esc(u.datum || today())}" required></label>
+              <label>Von Gremium<select name="vonGremiumId" id="vonGremiumId">${selectOptions(db.gremien, "Von Gremium", u.vonGremiumId)}</select></label>
+              <label>Von Person<select name="vonPersonId" id="vonPersonId">${personSelectListForGremium(u.vonGremiumId, u.vonPersonId)}</select></label>
+              <label>An Gremium<select name="anGremiumId" id="anGremiumId">${selectOptions(db.gremien, "An Gremium", u.anGremiumId)}</select></label>
+              <label>An Person<select name="anPersonId" id="anPersonId">${personSelectListForGremium(u.anGremiumId, u.anPersonId)}</select></label>
+              <label>Protokoll-Nr.<input name="protokollNr" value="${esc(u.protokollNr)}"></label>
+              <label class="wide">Protokoll-Ablageort<input name="protokollAblage" placeholder="Ordner, Aktenzeichen oder Dateipfad" value="${esc(u.protokollAblage)}"></label>
+              <label>Zustand<input name="zustand" value="${esc(u.zustand)}"></label>
+              <label class="check"><input name="unterschriftVon" type="checkbox" ${u.unterschriftVon ? "checked" : ""}> Unterschrift abgebend</label>
+              <label class="check"><input name="unterschriftAn" type="checkbox" ${u.unterschriftAn ? "checked" : ""}> Unterschrift empfangend</label>
+              <label class="wide">Übergabeprotokoll als Datei (PDF, optional)<input name="protokollDatei" type="file" accept="application/pdf,image/*" ${dataDirectoryHandle ? "" : "disabled"}></label>
+              ${dataDirectoryHandle ? "" : '<label class="wide" style="align-self:end;color:var(--muted);font-size:12px">Zum Ablegen von Dateien zuerst im Bereich "Datenordner" einen Ordner verbinden.</label>'}
+              <label class="full">Zubehör/Notiz<textarea name="notiz">${esc(u.notiz)}</textarea></label>
+              <div class="actions">
+                <button class="primary" type="submit">${u.id ? "Änderungen speichern" : "Übergabe speichern"}</button>
+                ${u.id ? '<button class="secondary" id="cancelUebergabeEdit" type="button">Abbrechen</button>' : ""}
+              </div>
+            </form>
+          </div>
+          <div class="panel span-12">
+            ${table(["Datum", "Inventar", "Von", "An", "Protokoll", "Ablage", "Datei", ""], db.uebergaben.slice().reverse().map(row => {
+              const item = byId(db.inventar, row.inventarId);
+              const doc = (db.dokumente || []).find(d => Number(d.uebergabeId) === Number(row.id));
+              return [
+                row.datum,
+                item ? `${item.inventarNr} ${item.bezeichnung}` : "",
+                personName(row.vonPersonId) || gremiumName(row.vonGremiumId),
+                personName(row.anPersonId) || gremiumName(row.anGremiumId),
+                row.protokollNr || "",
+                row.protokollAblage || "",
+                doc ? raw(`<button class="secondary" type="button" data-open-doc="${doc.id}">Öffnen</button>`) : "-",
+                actionButtons("uebergabe", row.id)
+              ];
+            }))}
+          </div>
+        </div>`;
+    }
+
+    function documentReference(doc) {
+      const parts = [];
+      if (doc.inventarId) {
+        const item = byId(db.inventar, doc.inventarId);
+        if (item) parts.push(`Inventar: ${item.inventarNr || ""} ${item.bezeichnung || ""}`.trim());
+      }
+      if (doc.uebergabeId) {
+        const u = byId(db.uebergaben, doc.uebergabeId);
+        if (u) parts.push(`Übergabe vom ${u.datum || ""}`);
+      }
+      if (doc.personId) {
+        parts.push(`Person: ${personName(doc.personId)}`);
+      }
+      return parts.join(" | ") || "-";
+    }
+
+    function formatBytes(n) {
+      const value = Number(n) || 0;
+      if (value < 1024) return `${value} B`;
+      if (value < 1024 * 1024) return `${(value / 1024).toFixed(0)} KB`;
+      return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function viewDokumente() {
+      if (iphoneMode) {
+        return `<div class="panel"><h3>Dokumente</h3><div class="notice warn">Die Dateiverwaltung ist im iPhone-Modus nicht verfügbar, da iOS keinen dauerhaften Ordnerzugriff erlaubt. Bitte Übergabeprotokolle separat in der Dateien-App oder iCloud ablegen.</div></div>`;
+      }
+      if (!dataDirectoryHandle) {
+        return `<div class="panel"><h3>Dokumente</h3><div class="notice warn">Bitte zuerst im Bereich "Datenordner" einen Ordner verbinden. Erst dann können Dateien wie Übergabeprotokolle (PDF), Kaufbelege oder Fotos dauerhaft abgelegt werden.</div></div>`;
+      }
+      return `
+        <div class="grid">
+          <div class="panel span-12">
+            <h3>Dokument hinzufügen</h3>
+            <form id="dokumentForm">
+              <label>Art<select name="typ">
+                <option>Übergabeprotokoll</option>
+                <option>Kaufbeleg</option>
+                <option>Foto</option>
+                <option>Sonstiges</option>
+              </select></label>
+              <label class="wide">Inventar<select name="inventarId">${selectOptions(db.inventar.map(i => ({ id: i.id, name: `${i.inventarNr} - ${i.bezeichnung}` })), "Kein Bezug zu Inventar")}</select></label>
+              <label>Übergabe<select name="uebergabeId">${selectOptions(db.uebergaben.map(u => ({ id: u.id, name: `${u.datum} - ${byId(db.inventar, u.inventarId)?.bezeichnung || ""}` })), "Kein Bezug zu Übergabe")}</select></label>
+              <label>Person<select name="personId">${selectOptions(db.personen.map(p => ({ id: p.id, name: personName(p.id) })), "Kein Bezug zu Person")}</select></label>
+              <label class="wide">Datei (PDF, Bild ...)<input name="datei" type="file" required></label>
+              <label class="full">Notiz<textarea name="notiz"></textarea></label>
+              <div class="actions"><button class="primary" type="submit">Datei speichern</button></div>
+            </form>
+          </div>
+          <div class="panel span-12">
+            <div class="toolbar"><input id="dokumentFilter" placeholder="Dokumente suchen"></div>
+            <div id="dokumenteTable"></div>
+          </div>
+        </div>`;
+    }
+
+    function viewBerichte() {
+      return `
+        <div class="panel">
+          <div class="toolbar">
+            <select id="reportType">
+              <option value="inventory">Inventarliste</option>
+              <option value="members">Mitgliederliste</option>
+            </select>
+            <select id="reportScope">
+              <option value="all">Alle Gremien</option>
+              <option value="LEV">Nur LEV</option>
+              <option value="KEV">Alle Kreiselternvertretungen</option>
+              <option value="gremium">Ein Gremium auswählen</option>
+            </select>
+            <select id="reportGremium">${selectOptions(db.gremien, "Gremium für Bericht")}</select>
+            <select id="reportOwnerMode">
+              <option value="with">Besitz anzeigen</option>
+              <option value="without">Besitz ausblenden</option>
+            </select>
+            <input id="reportFilter" placeholder="Suchen">
+            <button class="secondary" id="exportReport" type="button">CSV exportieren</button>
+            <button class="secondary" id="printReport" type="button">PDF erstellen</button>
+          </div>
+          <div id="reportTable"></div>
+        </div>`;
+    }
+
+    function viewStamm() {
+      return `
+        <div class="grid">
+          <div class="panel span-6">
+            <h3>Gremien</h3>
+            ${table(["Kurzname", "Typ", "Name", "Region"], db.gremien.map(g => [g.kurz, g.typ, g.name, g.region]))}
+          </div>
+          <div class="panel span-6">
+            <h3>Kategorien</h3>
+            <form id="categoryForm">
+              <label class="wide">Neue Kategorie<input name="name"></label>
+              <div class="actions"><button class="secondary" type="submit">Kategorie hinzufügen</button></div>
+            </form>
+            ${table(["Kategorie"], db.kategorien.map(k => [k.name]))}
+          </div>
+        </div>`;
+    }
+
+    function viewSicherung() {
+      if (iphoneMode) {
+        return `
+          <div class="grid">
+            <div class="panel span-7">
+              <h3>Datenordner</h3>
+              <div class="notice">Im iPhone-Modus speichert die App lokal im Browser-Speicher des Geräts. Bitte regelmäßig eine Sicherungsdatei herunterladen und in der Dateien-App oder in iCloud ablegen, da iOS keinen dauerhaften Ordnerzugriff erlaubt.</div>
+              <div class="actions" style="margin-top:12px">
+                <button class="primary" id="saveBtn2" type="button">Jetzt speichern</button>
+                <button class="secondary" id="backupBtn" type="button">Sicherungsdatei herunterladen</button>
+                <button class="secondary" id="resetBtn" type="button">Neue leere Datenbank starten</button>
+              </div>
+            </div>
+            <div class="panel span-5">
+              <h3>Datensatz</h3>
+              ${table(["Feld", "Wert"], [
+                ["Aktualisiert", db.meta.updatedAt],
+                ["Inventar", db.inventar.length],
+                ["Personen", db.personen.length],
+                ["Übergaben", db.uebergaben.length]
+              ])}
+            </div>
+          </div>`;
+      }
+      const supported = Boolean(window.showDirectoryPicker);
+      return `
+        <div class="grid">
+          <div class="panel span-7">
+            <h3>Datenordner</h3>
+            ${!supported ? `<div class="notice warn">Dieser Browser unterstützt keine dauerhafte Ordnerverbindung (kein Chrome/Edge). Bitte "Datei importieren" und "Kopie speichern unter" verwenden.</div>` : ""}
+            ${supported && !dataDirectoryHandle ? `
+              <div class="notice">Noch kein Datenordner verbunden. Wählen Sie einmalig einen Ordner (zum Beispiel auf dem USB-Stick). Danach legt die App bei jeder Änderung automatisch eine neue Datei mit Datums- und Uhrzeitstempel im Unterordner "daten" an und lädt beim nächsten Start automatisch den neuesten Stand.</div>
+              <div class="actions" style="margin-top:12px"><button class="primary" id="connectFolderBtn" type="button">Datenordner auswählen</button></div>
+            ` : ""}
+            ${supported && dataDirectoryHandle ? `
+              <div class="notice">Verbunden mit Ordner "${esc(dataDirectoryHandle.name)}". Aktuell geladen: ${activeSnapshotName ? esc(snapshotLabel(activeSnapshotName)) : "neue, noch nicht gespeicherte Datenbank"}.</div>
+              <div class="actions" style="margin-top:12px">
+                <button class="primary" id="saveBtn2" type="button">Jetzt speichern</button>
+                <button class="secondary" id="connectFolderBtn" type="button">Anderen Ordner wählen</button>
+                <label class="check" style="margin-left:auto"><input id="autosaveToggle" type="checkbox" ${autosaveEnabled ? "checked" : ""}> Automatisch speichern</label>
+              </div>
+            ` : ""}
+            <div class="actions" style="margin-top:8px">
+              <button class="secondary" id="backupBtn" type="button">Zusätzliche Kopie herunterladen</button>
+              ${dataDirectoryHandle ? '<button class="secondary" id="cleanupBtn" type="button">Alte Stände bereinigen</button>' : ""}
+              <button class="secondary" id="resetBtn" type="button">Neue leere Datenbank starten</button>
+            </div>
+          </div>
+          <div class="panel span-5">
+            <h3>Datensatz</h3>
+            ${table(["Feld", "Wert"], [
+              ["Aktualisiert", db.meta.updatedAt],
+              ["Inventar", db.inventar.length],
+              ["Personen", db.personen.length],
+              ["Übergaben", db.uebergaben.length],
+              ["Dokumente", (db.dokumente || []).length],
+              ["Datenordner", dataDirectoryHandle ? dataDirectoryHandle.name : "nicht verbunden"]
+            ])}
+          </div>
+          ${dataDirectoryHandle ? `
+          <div class="panel span-12">
+            <h3>Gespeicherte Stände</h3>
+            <div class="notice">Hier kann bei Bedarf ein älterer Stand geöffnet werden. Ohne Auswahl lädt die App beim Start immer automatisch den neuesten Stand.</div>
+            <div id="snapshotTable"></div>
+          </div>` : ""}
+        </div>`;
+    }
+
+    function bindView() {
+      const inventarForm = document.getElementById("inventarForm");
+      if (inventarForm) {
+        inventarForm.addEventListener("submit", async event => {
+          event.preventDefault();
+          const f = new FormData(inventarForm);
+          const gremiumId = Number(f.get("gremiumId")) || "";
+          const item = {
+            id: editing.inventarId || nextId(db.inventar),
+            inventarNr: f.get("inventarNr") || generateInventoryNumber(gremiumId),
+            bezeichnung: f.get("bezeichnung"),
+            kategorieId: Number(f.get("kategorieId")) || "",
+            statusId: Number(f.get("statusId")) || 1,
+            gremiumId,
+            personId: Number(f.get("personId")) || "",
+            hersteller: f.get("hersteller"),
+            modell: f.get("modell"),
+            seriennummer: f.get("seriennummer"),
+            anschaffungsdatum: f.get("anschaffungsdatum"),
+            preis: f.get("preis"),
+            garantieBis: f.get("garantieBis"),
+            zustand: f.get("zustand"),
+            enthaeltDaten: Boolean(f.get("enthaeltDaten")),
+            notiz: f.get("notiz")
+          };
+          const index = db.inventar.findIndex(row => Number(row.id) === Number(item.id));
+          if (index >= 0) {
+            db.inventar[index] = item;
+          } else {
+            db.inventar.push(item);
+          }
+          editing.inventarId = null;
+          inventarForm.reset();
+          await persistChange();
+        });
+        document.getElementById("cancelInventarEdit")?.addEventListener("click", () => {
+          editing.inventarId = null;
+          render();
+        });
+        document.getElementById("inventarFilter").addEventListener("input", renderInventarTable);
+        document.getElementById("downloadInventoryTemplate").addEventListener("click", downloadInventoryTemplate);
+        document.getElementById("importInventoryBtn").addEventListener("click", () => document.getElementById("inventoryImportInput").click());
+        document.getElementById("exportInventar").addEventListener("click", exportInventarCsv);
+        renderInventarTable();
+      }
+
+      const personForm = document.getElementById("personForm");
+      if (personForm) {
+        personForm.addEventListener("submit", async event => {
+          event.preventDefault();
+          const f = new FormData(personForm);
+          const personId = editing.personId || nextId(db.personen);
+          const person = {
+            id: personId,
+            vorname: f.get("vorname"),
+            nachname: f.get("nachname"),
+            email: f.get("email"),
+            telefon: f.get("telefon"),
+            notiz: f.get("notiz")
+          };
+          const personIndex = db.personen.findIndex(row => Number(row.id) === Number(personId));
+          if (personIndex >= 0) {
+            db.personen[personIndex] = person;
+          } else {
+            db.personen.push(person);
+          }
+          db.mitgliedschaften = db.mitgliedschaften || [];
+          const selectedGremiumIds = f.getAll("gremiumIds").map(Number).filter(Boolean);
+          const oldMemberships = personMemberships(personId);
+          db.mitgliedschaften = db.mitgliedschaften.filter(row => Number(row.personId) !== Number(personId));
+          selectedGremiumIds.forEach(gremiumId => {
+            const existingMembership = oldMemberships.find(row => Number(row.gremiumId) === Number(gremiumId)) || {};
+            db.mitgliedschaften.push({
+              id: existingMembership.id || nextId(db.mitgliedschaften),
+              personId,
+              gremiumId,
+              funktion: f.get("funktion"),
+              beginn: existingMembership.beginn || today(),
+              aktiv: true
+            });
+          });
+          editing.personId = null;
+          personForm.reset();
+          await persistChange();
+        });
+        document.getElementById("cancelPersonEdit")?.addEventListener("click", () => {
+          editing.personId = null;
+          render();
+        });
+        document.getElementById("personFilter").addEventListener("input", renderPersonTable);
+        document.getElementById("downloadPersonTemplate").addEventListener("click", downloadPersonTemplate);
+        document.getElementById("importPersonsBtn").addEventListener("click", () => document.getElementById("personImportInput").click());
+        renderPersonTable();
+      }
+
+      const uebergabeForm = document.getElementById("uebergabeForm");
+      if (uebergabeForm) {
+        uebergabeForm.addEventListener("submit", async event => {
+          event.preventDefault();
+          const f = new FormData(uebergabeForm);
+          const uebergabe = {
+            id: editing.uebergabeId || nextId(db.uebergaben),
+            inventarId: Number(f.get("inventarId")),
+            datum: f.get("datum"),
+            vonGremiumId: Number(f.get("vonGremiumId")) || "",
+            vonPersonId: Number(f.get("vonPersonId")) || "",
+            anGremiumId: Number(f.get("anGremiumId")) || "",
+            anPersonId: Number(f.get("anPersonId")) || "",
+            protokollNr: f.get("protokollNr"),
+            protokollAblage: f.get("protokollAblage"),
+            zustand: f.get("zustand"),
+            unterschriftVon: Boolean(f.get("unterschriftVon")),
+            unterschriftAn: Boolean(f.get("unterschriftAn")),
+            notiz: f.get("notiz")
+          };
+          const index = db.uebergaben.findIndex(row => Number(row.id) === Number(uebergabe.id));
+          if (index >= 0) {
+            db.uebergaben[index] = uebergabe;
+          } else {
+            db.uebergaben.push(uebergabe);
+          }
+          const protokollDatei = f.get("protokollDatei");
+          if (protokollDatei && protokollDatei.size && dataDirectoryHandle) {
+            try {
+              const onDisk = await storeDocumentFile(protokollDatei);
+              db.dokumente = db.dokumente || [];
+              db.dokumente.push({
+                id: nextId(db.dokumente),
+                dateiname: onDisk,
+                originalName: protokollDatei.name,
+                typ: "Übergabeprotokoll",
+                inventarId: uebergabe.inventarId,
+                uebergabeId: uebergabe.id,
+                personId: uebergabe.anPersonId || "",
+                notiz: "",
+                groesse: protokollDatei.size,
+                hinzugefuegtAm: new Date().toISOString()
+              });
+            } catch (err) {
+              alert("Protokoll-Datei konnte nicht gespeichert werden: " + err.message);
+            }
+          }
+          editing.uebergabeId = null;
+          uebergabeForm.reset();
+          await persistChange();
+        });
+        document.getElementById("cancelUebergabeEdit")?.addEventListener("click", () => {
+          editing.uebergabeId = null;
+          render();
+        });
+        const vonGremium = document.getElementById("vonGremiumId");
+        const vonPerson = document.getElementById("vonPersonId");
+        const anGremium = document.getElementById("anGremiumId");
+        const anPerson = document.getElementById("anPersonId");
+        vonGremium?.addEventListener("change", () => updatePersonSelectForGremium(vonPerson, vonGremium.value));
+        anGremium?.addEventListener("change", () => updatePersonSelectForGremium(anPerson, anGremium.value));
+      }
+
+      const dokumentForm = document.getElementById("dokumentForm");
+      if (dokumentForm) {
+        dokumentForm.addEventListener("submit", async event => {
+          event.preventDefault();
+          const f = new FormData(dokumentForm);
+          const file = f.get("datei");
+          if (!file || !file.size) {
+            alert("Bitte eine Datei auswählen.");
+            return;
+          }
+          try {
+            const onDisk = await storeDocumentFile(file);
+            db.dokumente = db.dokumente || [];
+            db.dokumente.push({
+              id: nextId(db.dokumente),
+              dateiname: onDisk,
+              originalName: file.name,
+              typ: f.get("typ"),
+              inventarId: Number(f.get("inventarId")) || "",
+              uebergabeId: Number(f.get("uebergabeId")) || "",
+              personId: Number(f.get("personId")) || "",
+              notiz: f.get("notiz"),
+              groesse: file.size,
+              hinzugefuegtAm: new Date().toISOString()
+            });
+            dokumentForm.reset();
+            await persistChange();
+          } catch (err) {
+            alert("Datei konnte nicht gespeichert werden: " + err.message);
+          }
+        });
+        document.getElementById("dokumentFilter").addEventListener("input", renderDokumenteTable);
+        renderDokumenteTable();
+      }
+
+      const reportType = document.getElementById("reportType");
+      if (reportType) {
+        reportType.addEventListener("change", renderReportTable);
+        document.getElementById("reportScope").addEventListener("change", renderReportTable);
+        document.getElementById("reportGremium").addEventListener("change", () => {
+          if (document.getElementById("reportGremium").value) document.getElementById("reportScope").value = "gremium";
+          renderReportTable();
+        });
+        document.getElementById("reportOwnerMode").addEventListener("change", renderReportTable);
+        document.getElementById("reportFilter").addEventListener("input", renderReportTable);
+        document.getElementById("exportReport").addEventListener("click", () => {
+          const report = buildReport();
+          downloadReportCsv(`${report.fileName}.csv`, report);
+        });
+        document.getElementById("printReport").addEventListener("click", printCurrentReport);
+        renderReportTable();
+      }
+
+      const categoryForm = document.getElementById("categoryForm");
+      if (categoryForm) {
+        categoryForm.addEventListener("submit", async event => {
+          event.preventDefault();
+          const name = new FormData(categoryForm).get("name");
+          if (!name) return;
+          db.kategorien.push({ id: nextId(db.kategorien), name });
+          await persistChange();
+        });
+      }
+
+      document.getElementById("saveBtn2")?.addEventListener("click", () => saveData());
+      document.getElementById("connectFolderBtn")?.addEventListener("click", () => connectDataFolder());
+      document.getElementById("autosaveToggle")?.addEventListener("change", event => {
+        autosaveEnabled = event.target.checked;
+      });
+      document.getElementById("cleanupBtn")?.addEventListener("click", cleanupSnapshots);
+      document.getElementById("backupBtn")?.addEventListener("click", () => downloadJson(`inventar_backup_${timestampForFile()}.json`));
+      document.getElementById("resetBtn")?.addEventListener("click", () => {
+        if (!confirm("Neue leere Datenbank starten? Ungespeicherte Änderungen gehen verloren. Bereits gespeicherte Stände im Datenordner bleiben erhalten.")) return;
+        db = defaults();
+        editing = { inventarId: null, personId: null, uebergabeId: null };
+        fileName = "";
+        activeSnapshotName = null;
+        dirty = true;
+        render();
+      });
+      if (document.getElementById("snapshotTable")) renderSnapshotTable();
+    }
+
+    function renderInventarTable() {
+      const q = document.getElementById("inventarFilter").value.toLowerCase();
+      const rows = currentRows().filter(row => Object.values(row).join(" ").toLowerCase().includes(q));
+      document.getElementById("inventarTable").innerHTML = table(
+        ["Inventar-Nr", "Bezeichnung", "Kategorie", "Status", "Gremium", "Person", "Seriennummer", "Daten", ""],
+        rows.map(r => [r.inventarNr, r.bezeichnung, r.kategorie, r.status, r.gremium, r.person, r.seriennummer, r.datentraeger, actionButtons("inventar", r.inventarId)])
+      );
+    }
+
+    function renderPersonTable() {
+      const q = document.getElementById("personFilter").value.toLowerCase();
+      const rows = db.personen.filter(p => Object.values(p).join(" ").toLowerCase().includes(q));
+      document.getElementById("personenTable").innerHTML = table(
+        ["Nachname", "Vorname", "E-Mail", "Telefon", "Gremium", ""],
+        rows.map(p => {
+          const memberships = (db.mitgliedschaften || []).filter(m => Number(m.personId) === Number(p.id)).map(m => gremiumName(m.gremiumId)).join("; ");
+          return [p.nachname, p.vorname, p.email, p.telefon, memberships, actionButtons("person", p.id)];
+        })
+      );
+    }
+
+    function renderDokumenteTable() {
+      const el = document.getElementById("dokumenteTable");
+      if (!el) return;
+      const q = (document.getElementById("dokumentFilter")?.value || "").toLowerCase();
+      const rows = (db.dokumente || []).filter(d => `${d.typ} ${d.originalName} ${documentReference(d)} ${d.notiz || ""}`.toLowerCase().includes(q));
+      el.innerHTML = table(
+        ["Art", "Datei", "Bezug", "Größe", "Hinzugefügt", ""],
+        rows.slice().reverse().map(d => [
+          d.typ,
+          d.originalName,
+          documentReference(d),
+          formatBytes(d.groesse),
+          d.hinzugefuegtAm ? new Date(d.hinzugefuegtAm).toLocaleString("de-DE") : "",
+          raw(`<button class="secondary" type="button" data-open-doc="${d.id}">Öffnen</button> <button class="danger" type="button" data-delete-doc="${d.id}">Löschen</button>`)
+        ])
+      );
+    }
+
+    async function renderSnapshotTable() {
+      const el = document.getElementById("snapshotTable");
+      if (!el || !dataDirectoryHandle) return;
+      let names = [];
+      try {
+        names = await listSnapshotFiles();
+      } catch (err) {
+        el.innerHTML = `<div class="notice warn">Gespeicherte Stände konnten nicht gelesen werden: ${esc(err.message)}</div>`;
+        return;
+      }
+      el.innerHTML = table(
+        ["Datum/Uhrzeit", "Dateiname", "Aktiv", ""],
+        names.slice(0, 200).map(name => [
+          snapshotLabel(name),
+          name,
+          name === activeSnapshotName ? "ja" : "",
+          raw(`<button class="secondary" type="button" data-open-snapshot="${esc(name)}">Öffnen</button>`)
+        ])
+      );
+    }
+
+    function reportScopeMatches(gremiumId, scope, selectedGremiumId) {
+      const gremium = byId(db.gremien, gremiumId);
+      if (scope === "all") return true;
+      if (scope === "LEV") return gremium?.typ === "LEV";
+      if (scope === "KEV") return gremium?.typ === "KEV";
+      if (scope === "gremium") return selectedGremiumId && Number(gremiumId) === Number(selectedGremiumId);
+      return true;
+    }
+
+    function reportScopeTitle(scope, selectedGremiumId) {
+      if (scope === "LEV") return "Landeselternvertretung";
+      if (scope === "KEV") return "Kreiselternvertretungen";
+      if (scope === "gremium") return gremiumName(selectedGremiumId) || "ausgewähltes Gremium";
+      return "alle Gremien";
+    }
+
+    function inventoryReportRows(scope, selectedGremiumId, includeOwner, query) {
+      return db.inventar.map(item => {
+        const ownership = currentOwnership(item);
+        return { item, ownership, row: currentRows().find(r => Number(r.inventarId) === Number(item.id)) };
+      }).filter(entry => entry.row && reportScopeMatches(entry.ownership.gremiumId, scope, selectedGremiumId))
+        .map(entry => {
+          const item = entry.item;
+          const row = entry.row;
+          const result = {
+            "Inventar-Nr": row.inventarNr,
+            "Bezeichnung": row.bezeichnung,
+            "Kategorie": row.kategorie,
+            "Status": row.status,
+            "Gremium": row.gremium,
+            "Seriennummer": row.seriennummer,
+            "Zustand": row.zustand,
+            "Anschaffungsdatum": row.anschaffungsdatum,
+            "Garantie bis": row.garantieBis,
+            "Protokoll": row.protokollOk
+          };
+          if (includeOwner) result["Besitz/Person"] = row.person;
+          return result;
+        }).filter(row => Object.values(row).join(" ").toLowerCase().includes(query));
+    }
+
+    function memberReportRows(scope, selectedGremiumId, query) {
+      return (db.mitgliedschaften || [])
+        .filter(m => m.aktiv !== false && reportScopeMatches(m.gremiumId, scope, selectedGremiumId))
+        .map(m => {
+          const person = byId(db.personen, m.personId);
+          if (!person) return null;
+          return {
+            "Gremium": gremiumName(m.gremiumId),
+            "Nachname": person.nachname || "",
+            "Vorname": person.vorname || "",
+            "Funktion": m.funktion || "",
+            "E-Mail": person.email || "",
+            "Telefon": person.telefon || "",
+            "Notiz": person.notiz || ""
+          };
+        }).filter(Boolean)
+        .filter(row => Object.values(row).join(" ").toLowerCase().includes(query))
+        .sort((a, b) => String(a.Gremium).localeCompare(String(b.Gremium)) || String(a.Nachname).localeCompare(String(b.Nachname)));
+    }
+
+    function buildReport() {
+      const type = document.getElementById("reportType")?.value || "inventory";
+      const scope = document.getElementById("reportScope")?.value || "all";
+      const selectedGremiumId = document.getElementById("reportGremium")?.value || "";
+      const includeOwner = (document.getElementById("reportOwnerMode")?.value || "with") === "with";
+      const q = (document.getElementById("reportFilter")?.value || "").toLowerCase();
+      const title = `${type === "members" ? "Mitgliederliste" : "Inventarliste"} - ${reportScopeTitle(scope, selectedGremiumId)}`;
+      const rows = type === "members"
+        ? memberReportRows(scope, selectedGremiumId, q)
+        : inventoryReportRows(scope, selectedGremiumId, includeOwner, q);
+      return {
+        title,
+        rows,
+        headers: Object.keys(rows[0] || (type === "members"
+          ? { "Gremium": "", "Nachname": "", "Vorname": "", "Funktion": "", "E-Mail": "", "Telefon": "", "Notiz": "" }
+          : includeOwner
+            ? { "Inventar-Nr": "", "Bezeichnung": "", "Kategorie": "", "Status": "", "Gremium": "", "Besitz/Person": "", "Seriennummer": "", "Zustand": "", "Anschaffungsdatum": "", "Garantie bis": "", "Protokoll": "" }
+            : { "Inventar-Nr": "", "Bezeichnung": "", "Kategorie": "", "Status": "", "Gremium": "", "Seriennummer": "", "Zustand": "", "Anschaffungsdatum": "", "Garantie bis": "", "Protokoll": "" })),
+        fileName: `${type === "members" ? "mitgliederliste" : "inventarliste"}_${today()}`
+      };
+    }
+
+    function renderReportTable() {
+      const report = buildReport();
+      const ownerMode = document.getElementById("reportOwnerMode");
+      if (ownerMode) ownerMode.disabled = document.getElementById("reportType")?.value === "members";
+      document.getElementById("reportTable").innerHTML = table(
+        report.headers,
+        report.rows.map(row => report.headers.map(header => row[header]))
+      );
+    }
+
+    function printCurrentReport() {
+      const report = buildReport();
+      const htmlRows = report.rows.map(row => `<tr>${report.headers.map(header => `<td>${esc(row[header])}</td>`).join("")}</tr>`).join("");
+      const printHtml = `<!doctype html>
+        <html lang="de"><head><meta charset="utf-8"><title>${esc(report.title)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #1f2724; margin: 24px; }
+          h1 { font-size: 20px; margin: 0 0 6px; }
+          p { margin: 0 0 16px; color: #61706a; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; }
+          th, td { border: 1px solid #cfd8d3; padding: 5px 6px; text-align: left; vertical-align: top; }
+          th { background: #eef3f0; }
+          @media print { body { margin: 12mm; } }
+        </style></head><body>
+        <h1>${esc(report.title)}</h1>
+        <p>Stand: ${today()} - ${report.rows.length} Einträge</p>
+        <table><thead><tr>${report.headers.map(header => `<th>${esc(header)}</th>`).join("")}</tr></thead><tbody>${htmlRows || `<tr><td colspan="${report.headers.length}">Keine Einträge vorhanden.</td></tr>`}</tbody></table>
+        <script>window.onload = () => window.print();<\/script>
+        </body></html>`;
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("Das PDF-Fenster konnte nicht geöffnet werden. Bitte Popups für diese Datei erlauben.");
+        return;
+      }
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+    }
+
+    function downloadBlob(name, blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadJson(name = "inventar_daten.json") {
+      downloadBlob(name, new Blob([JSON.stringify(db, null, 2)], { type: "application/json;charset=utf-8" }));
+    }
+
+    function saveIPhoneLocal(json) {
+      if (!iphoneMode || !window.localStorage) return false;
+      window.localStorage.setItem(iphoneStorageKey, json);
+      return true;
+    }
+
+    function loadIPhoneLocal() {
+      if (!iphoneMode || !window.localStorage) return;
+      const saved = window.localStorage.getItem(iphoneStorageKey);
+      if (!saved) return;
+      try {
+        db = Object.assign(defaults(), parseJsonText(saved));
+        applyOfficialGremien();
+        fileName = "iPhone-Speicher";
+        dirty = false;
+      } catch {
+        alert("Der lokale iPhone-Speicher konnte nicht gelesen werden. Bitte ein JSON-Backup über \"Datei importieren\" laden.");
+      }
+    }
+
+    function csvEscape(value) {
+      return `"${String(value ?? "").replace(/"/g, '""')}"`;
+    }
+
+    function downloadCsv(name, rows) {
+      const keys = Object.keys(rows[0] || { leer: "" });
+      const csv = [keys.join(";"), ...rows.map(row => keys.map(k => csvEscape(row[k])).join(";"))].join("\n");
+      downloadBlob(name, new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    }
+
+    function downloadReportCsv(name, report) {
+      const csv = [
+        report.headers.join(";"),
+        ...report.rows.map(row => report.headers.map(header => csvEscape(row[header])).join(";"))
+      ].join("\n");
+      downloadBlob(name, new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    }
+
+    function exportInventarCsv() {
+      const headerMap = {
+        inventarNr: "Inventar-Nr", bezeichnung: "Bezeichnung", kategorie: "Kategorie", status: "Status",
+        gremium: "Gremium", person: "Person", seriennummer: "Seriennummer", anschaffungsdatum: "Anschaffungsdatum",
+        garantieBis: "Garantie bis", letzteUebergabe: "Letzte Übergabe", protokollNr: "Protokoll-Nr.",
+        protokollAblage: "Protokoll-Ablage", protokollOk: "Protokoll OK", datentraeger: "Datenträger",
+        zustand: "Zustand", notiz: "Notiz"
+      };
+      const rows = currentRows().map(row => {
+        const mapped = {};
+        Object.keys(headerMap).forEach(key => { mapped[headerMap[key]] = row[key]; });
+        return mapped;
+      });
+      downloadCsv("inventarliste.csv", rows);
+    }
+
+    function personTemplateCsv() {
+      return [
+        "Vorname;Nachname;E-Mail;Telefon;Gremien;Funktion;Notiz",
+        "Max;Mustermann;max@example.org;01234 56789;LEV|KEV Segeberg;Mitglied;Beispielzeile bitte überschreiben"
+      ].join("\n");
+    }
+
+    function downloadPersonTemplate() {
+      downloadBlob("personen_import_vorlage.csv", new Blob(["﻿" + personTemplateCsv()], { type: "text/csv;charset=utf-8" }));
+    }
+
+    function inventoryTemplateCsv() {
+      return [
+        "Inventar-Nr;Bezeichnung;Kategorie;Status;Gremium;Besitzer Vorname;Besitzer Nachname;Besitzer E-Mail;Hersteller;Modell;Seriennummer;Anschaffungsdatum;Preis;Garantie bis;Zustand;Enthaelt Daten;Notiz",
+        ";Laptop Dell Latitude;Laptop;im Bestand;LEV;Anna;Beispiel;anna@example.org;Dell;Latitude 5450;ABC123;2026-06-10;899,00;2029-06-10;gut;ja;Inventar-Nr wird automatisch vergeben",
+        "KEV-SEGEBERG-2026-0007;Buch Schulrecht;Buch;im Bestand;KEV Segeberg;;;;;;ISBN 123;2026-06-10;39,90;;neu;nein;Vorhandene Nummer wird übernommen"
+      ].join("\n");
+    }
+
+    function downloadInventoryTemplate() {
+      downloadBlob("inventar_import_vorlage.csv", new Blob(["﻿" + inventoryTemplateCsv()], { type: "text/csv;charset=utf-8" }));
+    }
+
+    function parseCsv(text) {
+      const firstLine = String(text).split(/\r?\n/, 1)[0] || "";
+      const delimiter = firstLine.includes(";") ? ";" : ",";
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let quote = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+        if (ch === '"' && quote && next === '"') {
+          cell += '"';
+          i++;
+        } else if (ch === '"') {
+          quote = !quote;
+        } else if (ch === delimiter && !quote) {
+          row.push(cell.trim());
+          cell = "";
+        } else if ((ch === "\n" || ch === "\r") && !quote) {
+          if (ch === "\r" && next === "\n") i++;
+          row.push(cell.trim());
+          if (row.some(value => value !== "")) rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += ch;
+        }
+      }
+      row.push(cell.trim());
+      if (row.some(value => value !== "")) rows.push(row);
+      return rows;
+    }
+
+    async function importPersonsCsv(text) {
+      const rows = parseCsv(text);
+      if (!rows.length) return alert("Die CSV-Datei ist leer.");
+      const headers = rows[0].map(h => normalized(h).replace(/[-_\s]/g, ""));
+      const indexOf = names => names.map(name => headers.indexOf(name)).find(index => index >= 0);
+      const indexes = {
+        vorname: indexOf(["vorname"]),
+        nachname: indexOf(["nachname"]),
+        email: indexOf(["email", "emailadresse", "e-mail"]),
+        telefon: indexOf(["telefon", "tel"]),
+        gremien: indexOf(["gremien", "gremium"]),
+        funktion: indexOf(["funktion", "rolle"]),
+        notiz: indexOf(["notiz", "hinweis"])
+      };
+      if (indexes.nachname === undefined || indexes.nachname < 0) return alert("Die CSV braucht mindestens die Spalte Nachname.");
+
+      let created = 0;
+      let merged = 0;
+      rows.slice(1).forEach(values => {
+        const personData = {
+          vorname: values[indexes.vorname] || "",
+          nachname: values[indexes.nachname] || "",
+          email: values[indexes.email] || "",
+          telefon: values[indexes.telefon] || "",
+          notiz: values[indexes.notiz] || ""
+        };
+        if (!personData.nachname) return;
+        const duplicate = db.personen.find(p =>
+          (personData.email && normalized(p.email) === normalized(personData.email))
+          || (normalized(p.vorname) === normalized(personData.vorname) && normalized(p.nachname) === normalized(personData.nachname))
+        );
+        let target = duplicate;
+        if (duplicate) {
+          const merge = confirm(`Mögliches Duplikat gefunden:\n\nImport: ${personData.vorname} ${personData.nachname} ${personData.email}\nVorhanden: ${duplicate.vorname || ""} ${duplicate.nachname || ""} ${duplicate.email || ""}\n\nOK = zusammenführen, Abbrechen = als neuen Datensatz anlegen.`);
+          if (merge) {
+            duplicate.vorname = duplicate.vorname || personData.vorname;
+            duplicate.nachname = duplicate.nachname || personData.nachname;
+            duplicate.email = duplicate.email || personData.email;
+            duplicate.telefon = duplicate.telefon || personData.telefon;
+            duplicate.notiz = [duplicate.notiz, personData.notiz].filter(Boolean).join("\n");
+            merged++;
+          } else {
+            target = null;
+          }
+        }
+        if (!target) {
+          target = { id: nextId(db.personen), ...personData };
+          db.personen.push(target);
+          created++;
+        }
+        const gremiumTexts = String(values[indexes.gremien] || "").split(/[|,]/).map(value => value.trim()).filter(Boolean);
+        db.mitgliedschaften = db.mitgliedschaften || [];
+        gremiumTexts.forEach(text => {
+          const gremium = findGremiumByText(text);
+          if (!gremium) return;
+          const exists = personMemberships(target.id).some(m => Number(m.gremiumId) === Number(gremium.id));
+          if (!exists) {
+            db.mitgliedschaften.push({
+              id: nextId(db.mitgliedschaften),
+              personId: target.id,
+              gremiumId: gremium.id,
+              funktion: values[indexes.funktion] || "",
+              beginn: today(),
+              aktiv: true
+            });
+          }
+        });
+      });
+      await persistChange();
+      alert(`Import abgeschlossen.\nNeu angelegt: ${created}\nZusammengeführt: ${merged}`);
+    }
+
+    function truthyCsv(value) {
+      return ["ja", "j", "yes", "true", "1", "x"].includes(normalized(value));
+    }
+
+    async function importInventoryCsv(text) {
+      const rows = parseCsv(text);
+      if (!rows.length) return alert("Die CSV-Datei ist leer.");
+      const headers = rows[0].map(h => normalized(h).replace(/[-_\s]/g, ""));
+      const indexOf = names => names.map(name => headers.indexOf(name)).find(index => index >= 0);
+      const indexes = {
+        inventarNr: indexOf(["inventarnr", "inventarnummer", "nummer"]),
+        bezeichnung: indexOf(["bezeichnung", "name", "gegenstand"]),
+        kategorie: indexOf(["kategorie", "art"]),
+        status: indexOf(["status"]),
+        gremium: indexOf(["gremium", "gremien"]),
+        vorname: indexOf(["besitzervorname", "personvorname", "vorname"]),
+        nachname: indexOf(["besitzernachname", "personnachname", "nachname"]),
+        email: indexOf(["besitzeremail", "personemail", "email", "e-mail"]),
+        hersteller: indexOf(["hersteller"]),
+        modell: indexOf(["modell"]),
+        seriennummer: indexOf(["seriennummer", "seriennr"]),
+        anschaffungsdatum: indexOf(["anschaffungsdatum", "kaufdatum"]),
+        preis: indexOf(["preis", "anschaffungspreis", "betrag"]),
+        garantieBis: indexOf(["garantiebis", "garantie"]),
+        zustand: indexOf(["zustand"]),
+        enthaeltDaten: indexOf(["enthaeltdaten", "datentraeger", "daten"]),
+        notiz: indexOf(["notiz", "hinweis"])
+      };
+      if (indexes.bezeichnung === undefined || indexes.bezeichnung < 0) return alert("Die CSV braucht mindestens die Spalte Bezeichnung.");
+
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+      let generated = 0;
+      let missingOwners = 0;
+      rows.slice(1).forEach(values => {
+        const bezeichnung = values[indexes.bezeichnung] || "";
+        if (!bezeichnung) return;
+        const gremium = findGremiumByText(values[indexes.gremium] || "");
+        const category = findCategoryByText(values[indexes.kategorie] || "");
+        const status = findStatusByText(values[indexes.status] || "");
+        const owner = findPersonByImport(values[indexes.vorname] || "", values[indexes.nachname] || "", values[indexes.email] || "");
+        if ((values[indexes.vorname] || values[indexes.nachname] || values[indexes.email]) && !owner) missingOwners++;
+        let inventarNr = values[indexes.inventarNr] || "";
+        if (!inventarNr) {
+          inventarNr = generateInventoryNumber(gremium?.id || "");
+          generated++;
+        }
+        const item = {
+          id: nextId(db.inventar),
+          inventarNr,
+          bezeichnung,
+          kategorieId: category?.id || "",
+          statusId: status?.id || 1,
+          gremiumId: gremium?.id || "",
+          personId: owner?.id || "",
+          hersteller: values[indexes.hersteller] || "",
+          modell: values[indexes.modell] || "",
+          seriennummer: values[indexes.seriennummer] || "",
+          anschaffungsdatum: values[indexes.anschaffungsdatum] || "",
+          preis: values[indexes.preis] || "",
+          garantieBis: values[indexes.garantieBis] || "",
+          zustand: values[indexes.zustand] || "",
+          enthaeltDaten: truthyCsv(values[indexes.enthaeltDaten] || ""),
+          notiz: values[indexes.notiz] || ""
+        };
+        const duplicate = db.inventar.find(row => normalized(row.inventarNr) === normalized(item.inventarNr));
+        if (duplicate) {
+          const replace = confirm(`Inventarnummer "${item.inventarNr}" ist bereits vorhanden.\n\nOK = vorhandenen Datensatz aktualisieren\nAbbrechen = Importzeile überspringen`);
+          if (!replace) {
+            skipped++;
+            return;
+          }
+          db.inventar[db.inventar.findIndex(row => Number(row.id) === Number(duplicate.id))] = { ...item, id: duplicate.id };
+          updated++;
+        } else {
+          db.inventar.push(item);
+          created++;
+        }
+      });
+      await persistChange();
+      alert(`Inventar-Import abgeschlossen.\nNeu angelegt: ${created}\nAktualisiert: ${updated}\nÜbersprungen: ${skipped}\nAutomatisch vergebene Inventarnummern: ${generated}\nNicht zugeordnete Besitzerangaben: ${missingOwners}`);
+    }
+
+    function updatePersonSelectForGremium(select, gremiumId) {
+      if (!select) return;
+      const selected = select.value;
+      select.innerHTML = personSelectListForGremium(gremiumId, selected);
+      if (selected && [...select.options].some(option => option.value === selected)) select.value = selected;
+    }
+
+    function idbOpen() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbSet(key, value) {
+      const conn = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = conn.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function idbGet(key) {
+      const conn = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = conn.transaction(IDB_STORE, "readonly");
+        const req = tx.objectStore(IDB_STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function timestampForFile(date = new Date()) {
+      const pad = n => String(n).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
+    }
+
+    function snapshotLabel(name) {
+      const match = name.match(/inventar_daten_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})/);
+      if (!match) return name;
+      const [, y, m, d, h, mi, s] = match;
+      return `${d}.${m}.${y} ${h}:${mi}:${s}`;
+    }
+
+    function parseJsonText(text) {
+      const clean = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
+      return JSON.parse(clean);
+    }
+
+    async function readTextSmart(file) {
+      const buffer = await file.arrayBuffer();
+      try {
+        return new TextDecoder("utf-8", { fatal: true }).decode(buffer).replace(/^﻿/, "");
+      } catch {
+        return new TextDecoder("windows-1252").decode(buffer);
+      }
+    }
+
+    async function readJsonFile(handle) {
+      const file = await handle.getFile();
+      return parseJsonText(await readTextSmart(file));
+    }
+
+    async function ensureSubfolders() {
+      await dataDirectoryHandle.getDirectoryHandle("daten", { create: true });
+      await dataDirectoryHandle.getDirectoryHandle("dokumente", { create: true });
+      await dataDirectoryHandle.getDirectoryHandle("exporte", { create: true });
+    }
+
+    async function listSnapshotFiles() {
+      if (!dataDirectoryHandle) return [];
+      const datenDir = await dataDirectoryHandle.getDirectoryHandle("daten", { create: true });
+      const names = [];
+      for await (const [name, handle] of datenDir.entries()) {
+        if (handle.kind === "file" && name.startsWith(SNAPSHOT_PREFIX) && name.endsWith(".json")) names.push(name);
+      }
+      return names.sort().reverse();
+    }
+
+    async function loadNewestSnapshot() {
+      const names = await listSnapshotFiles();
+      if (!names.length) return false;
+      const datenDir = await dataDirectoryHandle.getDirectoryHandle("daten", { create: true });
+      const handle = await datenDir.getFileHandle(names[0]);
+      db = Object.assign(defaults(), await readJsonFile(handle));
+      applyOfficialGremien();
+      activeSnapshotName = names[0];
+      dirty = false;
+      return true;
+    }
+
+    async function writeFileToHandle(handle, contents) {
+      const writable = await handle.createWritable();
+      await writable.write(contents);
+      await writable.close();
+    }
+
+    async function persistSnapshot(json) {
+      await ensureSubfolders();
+      const datenDir = await dataDirectoryHandle.getDirectoryHandle("daten", { create: true });
+      let name = `${SNAPSHOT_PREFIX}${timestampForFile()}.json`;
+      try {
+        await datenDir.getFileHandle(name);
+        name = `${SNAPSHOT_PREFIX}${timestampForFile()}_${uid()}.json`;
+      } catch {}
+      const handle = await datenDir.getFileHandle(name, { create: true });
+      await writeFileToHandle(handle, json);
+      activeSnapshotName = name;
+    }
+
+    async function openSnapshot(name) {
+      if (dirty && !confirm("Es gibt ungespeicherte Änderungen. Trotzdem einen anderen Stand öffnen?")) return;
+      try {
+        const datenDir = await dataDirectoryHandle.getDirectoryHandle("daten", { create: true });
+        const handle = await datenDir.getFileHandle(name);
+        db = Object.assign(defaults(), await readJsonFile(handle));
+        applyOfficialGremien();
+        activeSnapshotName = name;
+        dirty = false;
+        editing = { inventarId: null, personId: null, uebergabeId: null };
+        render();
+      } catch (err) {
+        alert("Stand konnte nicht geladen werden: " + err.message);
+      }
+    }
+
+    async function cleanupSnapshots() {
+      if (!dataDirectoryHandle) return;
+      const keep = 100;
+      let names = [];
+      try {
+        names = await listSnapshotFiles();
+      } catch (err) {
+        alert("Gespeicherte Stände konnten nicht gelesen werden: " + err.message);
+        return;
+      }
+      if (names.length <= keep) {
+        alert(`Es sind ${names.length} gespeicherte Stände vorhanden, keine Bereinigung nötig (Grenze: ${keep}).`);
+        return;
+      }
+      const toDelete = names.slice(keep);
+      if (!confirm(`${toDelete.length} ältere gespeicherte Stände löschen? Die neuesten ${keep} bleiben erhalten.`)) return;
+      const datenDir = await dataDirectoryHandle.getDirectoryHandle("daten", { create: true });
+      for (const name of toDelete) {
+        try { await datenDir.removeEntry(name); } catch {}
+      }
+      alert(`${toDelete.length} ältere Stände gelöscht.`);
+      render();
+    }
+
+    function sanitizeFilename(name) {
+      return String(name).replace(/[\\/:*?"<>|]+/g, "_").slice(0, 120);
+    }
+
+    async function storeDocumentFile(file) {
+      if (!dataDirectoryHandle) throw new Error('Kein Datenordner verbunden.');
+      const docDir = await dataDirectoryHandle.getDirectoryHandle("dokumente", { create: true });
+      let onDisk = `${timestampForFile()}_${sanitizeFilename(file.name)}`;
+      try {
+        await docDir.getFileHandle(onDisk);
+        onDisk = `${timestampForFile()}_${uid()}_${sanitizeFilename(file.name)}`;
+      } catch {}
+      const handle = await docDir.getFileHandle(onDisk, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(file);
+      await writable.close();
+      return onDisk;
+    }
+
+    async function openDocument(doc) {
+      if (!doc) return;
+      try {
+        const docDir = await dataDirectoryHandle.getDirectoryHandle("dokumente", { create: true });
+        const handle = await docDir.getFileHandle(doc.dateiname);
+        const file = await handle.getFile();
+        const url = URL.createObjectURL(file);
+        window.open(url, "_blank");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } catch (err) {
+        alert("Datei konnte nicht geöffnet werden: " + err.message);
+      }
+    }
+
+    async function deleteDocument(id) {
+      const doc = byId(db.dokumente, id);
+      if (!doc) return;
+      if (!confirm(`Dokument "${doc.originalName}" wirklich löschen?`)) return;
+      await removeDocumentFiles([doc]);
+      db.dokumente = (db.dokumente || []).filter(d => Number(d.id) !== Number(id));
+      await persistChange();
+    }
+
+    async function connectDataFolder() {
+      if (!window.showDirectoryPicker) {
+        alert("Dieser Browser unterstützt keine dauerhafte Ordnerverbindung. Bitte Chrome oder Edge verwenden.");
+        return;
+      }
+      try {
+        const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+        dataDirectoryHandle = handle;
+        pendingDirectoryHandle = null;
+        try { await idbSet("dataDir", handle); } catch {}
+        await ensureSubfolders();
+        const loaded = await loadNewestSnapshot();
+        if (!loaded) dirty = true;
+        render();
+      } catch (err) {
+        if (err?.name !== "AbortError") alert("Ordner konnte nicht verbunden werden: " + err.message);
+      }
+    }
+
+    async function confirmFolderAccess() {
+      if (!pendingDirectoryHandle) return;
+      try {
+        const perm = await pendingDirectoryHandle.requestPermission({ mode: "readwrite" });
+        if (perm === "granted") {
+          dataDirectoryHandle = pendingDirectoryHandle;
+          pendingDirectoryHandle = null;
+          await ensureSubfolders();
+          await loadNewestSnapshot();
+          render();
+        } else {
+          alert("Zugriff wurde nicht erteilt.");
+        }
+      } catch (err) {
+        alert("Zugriff konnte nicht bestätigt werden: " + err.message);
+      }
+    }
+
+    async function saveData({ silent = false } = {}) {
+      const json = JSON.stringify(db, null, 2);
+      if (saveIPhoneLocal(json)) {
+        dirty = false;
+        fileName = "iPhone-Speicher";
+        renderStatus();
+        return;
+      }
+      if (dataDirectoryHandle) {
+        try {
+          await persistSnapshot(json);
+          dirty = false;
+          renderStatus();
+          return;
+        } catch (err) {
+          if (!silent) alert("Speichern im Datenordner fehlgeschlagen: " + err.message);
+          return;
+        }
+      }
+      if (!silent) downloadJson(`${SNAPSHOT_PREFIX}${timestampForFile()}.json`);
+      dirty = false;
+      renderStatus();
+    }
+
+    async function saveAsData() {
+      if (!window.showSaveFilePicker) {
+        alert('Dieser Browser unterstützt "Speichern unter" nicht. Bitte "Speichern" verwenden oder eine Kopie herunterladen.');
+        return;
+      }
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `inventar_daten_${timestampForFile()}.json`,
+          types: [{ description: "JSON", accept: { "application/json": [".json"] } }]
+        });
+        await writeFileToHandle(handle, JSON.stringify(db, null, 2));
+      } catch (err) {
+        if (err?.name !== "AbortError") alert("Kopie konnte nicht gespeichert werden: " + err.message);
+      }
+    }
+
+    document.getElementById("loadBtn").addEventListener("click", () => document.getElementById("fileInput").click());
+    document.getElementById("saveBtn").addEventListener("click", () => saveData());
+    document.getElementById("saveAsBtn").addEventListener("click", saveAsData);
+    document.getElementById("personImportInput").addEventListener("change", async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      await importPersonsCsv(await readTextSmart(file));
+      event.target.value = "";
+    });
+    document.getElementById("inventoryImportInput").addEventListener("change", async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      await importInventoryCsv(await readTextSmart(file));
+      event.target.value = "";
+    });
+    document.getElementById("fileInput").addEventListener("change", async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        db = Object.assign(defaults(), parseJsonText(await readTextSmart(file)));
+        applyOfficialGremien();
+        saveIPhoneLocal(JSON.stringify(db, null, 2));
+        fileName = file.name;
+        activeSnapshotName = null;
+        dirty = true;
+        render();
+      } catch (err) {
+        alert("Datei konnte nicht gelesen werden: " + err.message);
+      }
+      event.target.value = "";
+    });
+
+    window.addEventListener("beforeunload", event => {
+      if (!dirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
+
+    async function boot() {
+      render();
+      if (iphoneMode) {
+        loadIPhoneLocal();
+        render();
+        return;
+      }
+      if (!window.showDirectoryPicker || !window.indexedDB) return;
+      try {
+        const stored = await idbGet("dataDir");
+        if (!stored) return;
+        const perm = await stored.queryPermission({ mode: "readwrite" });
+        if (perm === "granted") {
+          dataDirectoryHandle = stored;
+          await ensureSubfolders();
+          await loadNewestSnapshot();
+        } else {
+          pendingDirectoryHandle = stored;
+        }
+        render();
+      } catch {
+        /* Kein gespeicherter Ordner oder Zugriff nicht möglich - klassischer Modus bleibt nutzbar. */
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
