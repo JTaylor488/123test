@@ -72,6 +72,25 @@ Edge. Im iPhone-Modus ist sie nicht verfuegbar (iOS erlaubt keinen
 dauerhaften Ordnerzugriff); dort bitte Uebergabeprotokolle separat in der
 Dateien-App oder iCloud ablegen.
 
+Uebergabeprotokolle erstellen
+------------------------------
+Im Bereich "Uebergaben" kann ueber "Leeres Protokoll vorbereiten" ein
+druckfertiges, einseitiges Uebergabeprotokoll mit zwei Unterschriftenfeldern
+(abgebend/empfangend) erzeugt werden - zum Beispiel um es vorab auszudrucken
+und bei einem Treffen von Hand auszufuellen. Bei einer bereits erfassten
+Uebergabe erzeugt der Knopf "Protokoll" in der Tabelle stattdessen ein
+Protokoll, das Datum, Beteiligte, Protokoll-Nr. und Zustand schon aus dem
+Datensatz uebernimmt.
+
+Als zweite Seite wird automatisch eine Anlage mit der aktuellen
+Inventarliste (nur Inventar-Nr. und Bezeichnung) zum Ankreuzen angehaengt;
+bei einem bereits erfassten Datensatz ist das betroffene Inventarobjekt
+schon angekreuzt. Das Protokoll oeffnet sich in einem neuen Tab; dort im
+Browser "Drucken" bzw. "Als PDF speichern" waehlen. Das fertig
+unterschriebene Protokoll kann anschliessend als PDF im Bereich
+"Dokumente" oder direkt am Uebergabe-Datensatz abgelegt werden (siehe
+oben, "Dateien verwalten").
+
 Daten korrigieren
 -----------------
 In den Tabellen fuer Inventar, Personen und Uebergaben gibt es je Datensatz
@@ -105,6 +124,10 @@ jedem Fall korrekt angezeigt werden.
 Beim Import sucht die App nach moeglichen Duplikaten anhand von E-Mail oder
 gleichem Vor- und Nachnamen. Dann kann entschieden werden:
 OK = zusammenfuehren, Abbrechen = als eigenen Datensatz anlegen.
+
+Die aktuelle Personenliste kann jederzeit ueber "CSV exportieren" als
+CSV-Datei oder ueber "PDF erstellen" als druckfertige Liste (Name,
+Kontakt, Gremium, Funktion) exportiert werden.
 
 Inventar importieren
 --------------------

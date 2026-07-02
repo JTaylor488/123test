@@ -668,7 +668,7 @@
     }
 
     function handleViewClick(event) {
-      const button = event.target.closest?.("[data-edit-inventar], [data-edit-person], [data-edit-uebergabe], [data-delete-inventar], [data-delete-person], [data-delete-uebergabe], [data-open-doc], [data-delete-doc], [data-open-snapshot]");
+      const button = event.target.closest?.("[data-edit-inventar], [data-edit-person], [data-edit-uebergabe], [data-delete-inventar], [data-delete-person], [data-delete-uebergabe], [data-open-doc], [data-delete-doc], [data-open-snapshot], [data-print-protocol]");
       if (!button) return;
       if (button.dataset.editInventar) {
         editing.inventarId = Number(button.dataset.editInventar);
@@ -694,6 +694,8 @@
         deleteDocument(Number(button.dataset.deleteDoc));
       } else if (button.dataset.openSnapshot) {
         openSnapshot(button.dataset.openSnapshot);
+      } else if (button.dataset.printProtocol) {
+        printHandoverProtocol(Number(button.dataset.printProtocol));
       }
     }
 
@@ -889,6 +891,8 @@
               <input id="personFilter" placeholder="Person suchen">
               <button class="secondary" id="downloadPersonTemplate" type="button">CSV-Vorlage</button>
               <button class="secondary" id="importPersonsBtn" type="button">Personenliste laden</button>
+              <button class="secondary" id="exportPersonen" type="button">CSV exportieren</button>
+              <button class="secondary" id="printPersonen" type="button">PDF erstellen</button>
             </div>
             <div id="personenTable"></div>
           </div>
@@ -925,6 +929,13 @@
             </form>
           </div>
           <div class="panel span-12">
+            <h3>Übergabeprotokoll erstellen</h3>
+            <div class="notice">Erzeugt ein druckfertiges einseitiges Übergabeprotokoll mit Unterschriftenfeld. Als Anlage wird automatisch eine Inventarliste mit allen aktuellen Bezeichnungen zum Ankreuzen angehängt, welches Inventar übergeben wird.</div>
+            <div class="actions" style="margin-top:10px">
+              <button class="primary" id="blankProtocolBtn" type="button">Leeres Protokoll vorbereiten</button>
+            </div>
+          </div>
+          <div class="panel span-12">
             ${table(["Datum", "Inventar", "Von", "An", "Protokoll", "Ablage", "Datei", ""], db.uebergaben.slice().reverse().map(row => {
               const item = byId(db.inventar, row.inventarId);
               const doc = (db.dokumente || []).find(d => Number(d.uebergabeId) === Number(row.id));
@@ -936,7 +947,7 @@
                 row.protokollNr || "",
                 row.protokollAblage || "",
                 doc ? raw(`<button class="secondary" type="button" data-open-doc="${doc.id}">Öffnen</button>`) : "-",
-                actionButtons("uebergabe", row.id)
+                raw(`${editButton("uebergabe", row.id).raw} <button class="secondary" type="button" data-print-protocol="${row.id}">Protokoll</button> ${deleteButton("uebergabe", row.id).raw}`)
               ];
             }))}
           </div>
@@ -1213,6 +1224,8 @@
         document.getElementById("personFilter").addEventListener("input", renderPersonTable);
         document.getElementById("downloadPersonTemplate").addEventListener("click", downloadPersonTemplate);
         document.getElementById("importPersonsBtn").addEventListener("click", () => document.getElementById("personImportInput").click());
+        document.getElementById("exportPersonen").addEventListener("click", exportPersonenCsv);
+        document.getElementById("printPersonen").addEventListener("click", printPersonenListe);
         renderPersonTable();
       }
 
@@ -1278,6 +1291,7 @@
         vonGremium?.addEventListener("change", () => updatePersonSelectForGremium(vonPerson, vonGremium.value));
         anGremium?.addEventListener("change", () => updatePersonSelectForGremium(anPerson, anGremium.value));
         setupDropzone(document.getElementById("protokollDropzone"), document.getElementById("protokollDateiInput"), "PDF oder Bild hierher ziehen oder klicken zum Auswählen");
+        document.getElementById("blankProtocolBtn").addEventListener("click", () => printHandoverProtocol(null));
       }
 
       const dokumentForm = document.getElementById("dokumentForm");
@@ -1607,15 +1621,97 @@
         <table><thead><tr>${report.headers.map(header => `<th>${esc(header)}</th>`).join("")}</tr></thead><tbody>${htmlRows || `<tr><td colspan="${report.headers.length}">Keine Einträge vorhanden.</td></tr>`}</tbody></table>
         <script>window.onload = () => window.print();<\/script>
         </body></html>`;
+      openPrintableDocument(printHtml, "Das PDF-Fenster konnte nicht geöffnet werden. Bitte Popups für diese Datei erlauben.");
+    }
+
+    function openPrintableDocument(printHtml, failureMessage) {
       const blob = new Blob([printHtml], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const printWindow = window.open(url, "_blank");
       if (!printWindow) {
-        alert("Das PDF-Fenster konnte nicht geöffnet werden. Bitte Popups für diese Datei erlauben.");
+        alert(failureMessage);
         URL.revokeObjectURL(url);
         return;
       }
       setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+
+    function printHandoverProtocol(uebergabeId) {
+      const u = uebergabeId ? byId(db.uebergaben, uebergabeId) : null;
+      const von = u ? (personName(u.vonPersonId) || gremiumName(u.vonGremiumId)) : "";
+      const an = u ? (personName(u.anPersonId) || gremiumName(u.anGremiumId)) : "";
+      const datum = u ? u.datum : "";
+      const protokollNr = u ? (u.protokollNr || "") : "";
+      const zustand = u ? (u.zustand || "") : "";
+      const notiz = u ? (u.notiz || "") : "";
+      const rows = currentRows().slice().sort((a, b) => String(a.bezeichnung).localeCompare(String(b.bezeichnung)));
+      const checklistRows = rows.map(r => {
+        const checked = u && Number(r.inventarId) === Number(u.inventarId);
+        return `<tr${checked ? ' style="font-weight:700;background:#eef3f0"' : ""}><td class="chk">${checked ? "☒" : "☐"}</td><td>${esc(r.inventarNr)}</td><td>${esc(r.bezeichnung)}</td></tr>`;
+      }).join("");
+      const printHtml = `<!doctype html>
+        <html lang="de"><head><meta charset="utf-8"><title>Übergabeprotokoll ${esc(protokollNr)}</title>
+        <style>
+          @page { size: portrait; margin: 18mm 16mm; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; color: #1f2724; font-size: 13px; }
+          h1 { font-size: 19px; margin: 0 0 4px; }
+          h2 { font-size: 14px; margin: 20px 0 8px; border-bottom: 1px solid #cfd8d3; padding-bottom: 4px; }
+          .subtitle { color: #61706a; margin: 0 0 10px; }
+          .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin: 8px 0; }
+          .meta div { padding: 5px 0; border-bottom: 1px dotted #cfd8d3; min-height: 20px; }
+          .meta span { color: #61706a; font-size: 10.5px; display: block; }
+          p { line-height: 1.5; }
+          .note { background: #fff2d8; border: 1px solid #f0d08b; padding: 8px 10px; border-radius: 4px; font-size: 12px; margin: 14px 0; }
+          .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 46px; }
+          .sig .line { border-top: 1px solid #1f2724; margin-top: 46px; padding-top: 4px; font-size: 11px; color: #61706a; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+          th, td { border: 1px solid #cfd8d3; padding: 5px 6px; text-align: left; vertical-align: top; }
+          th { background: #eef3f0; }
+          thead { display: table-header-group; }
+          tr { break-inside: avoid; }
+          td.chk { text-align: center; width: 28px; font-size: 15px; }
+          .page-break { break-before: page; }
+          @media print { body { margin: 0; } }
+        </style></head><body>
+        <h1>Übergabeprotokoll</h1>
+        <p class="subtitle">Protokoll-Nr.: ${esc(protokollNr) || "____________________"} &nbsp;·&nbsp; Datum: ${esc(datum) || "____________________"}</p>
+
+        <h2>Beteiligte</h2>
+        <div class="meta">
+          <div><span>Abgebende Partei (Person/Gremium)</span>${esc(von) || "&nbsp;"}</div>
+          <div><span>Empfangende Partei (Person/Gremium)</span>${esc(an) || "&nbsp;"}</div>
+        </div>
+
+        <h2>Gegenstand der Übergabe</h2>
+        <p>Die abgebende Partei übergibt der empfangenden Partei das nachfolgend in der <strong>Anlage (Seite 2)</strong> angekreuzte Inventar im unten beschriebenen Zustand. Die Anlage ist Bestandteil dieses Protokolls und ohne sie nicht gültig.</p>
+        <div class="meta">
+          <div><span>Zustand bei Übergabe</span>${esc(zustand) || "&nbsp;"}</div>
+          <div><span>Zubehör / Anmerkungen</span>${esc(notiz) || "&nbsp;"}</div>
+        </div>
+
+        <div class="note">Die abgebende Partei bestätigt, dass vor der Übergabe alle personenbezogenen bzw. vertraulichen Daten von etwaigen Datenträgern gesichert bzw. gelöscht wurden, soweit nichts anderes vereinbart wurde.</div>
+
+        <p>Mit ihrer Unterschrift bestätigen beide Parteien die ordnungsgemäße Übergabe der in der Anlage angekreuzten Gegenstände im oben beschriebenen Zustand.</p>
+
+        <div class="sig">
+          <div class="line">Ort, Datum</div>
+          <div class="line">Ort, Datum</div>
+          <div class="line">Unterschrift abgebende Partei</div>
+          <div class="line">Unterschrift empfangende Partei</div>
+        </div>
+
+        <div class="page-break">
+          <h1 style="font-size:16px">Anlage: Inventarliste zum Ankreuzen</h1>
+          <p class="subtitle">Bitte das/die betreffende(n) Inventarobjekt(e) ankreuzen. Bestandteil des Übergabeprotokolls ${esc(protokollNr) || "(siehe Seite 1)"} vom ${esc(datum) || "____________________"}. Stand der Inventarliste: ${today()}</p>
+          <table>
+            <thead><tr><th>Ankreuzen</th><th>Inventar-Nr.</th><th>Bezeichnung</th></tr></thead>
+            <tbody>${checklistRows || `<tr><td colspan="3">Keine Inventarobjekte vorhanden.</td></tr>`}</tbody>
+          </table>
+        </div>
+        <script>window.onload = () => window.print();<\/script>
+        </body></html>`;
+      openPrintableDocument(printHtml, "Das Protokoll-Fenster konnte nicht geöffnet werden. Bitte Popups für diese Datei erlauben.");
     }
 
     function downloadBlob(name, blob) {
@@ -1685,6 +1781,52 @@
         return mapped;
       });
       downloadCsv("inventarliste.csv", rows);
+    }
+
+    function personenListRows() {
+      return db.personen.map(p => {
+        const memberships = (db.mitgliedschaften || []).filter(m => Number(m.personId) === Number(p.id));
+        return {
+          "Nachname": p.nachname || "",
+          "Vorname": p.vorname || "",
+          "E-Mail": p.email || "",
+          "Telefon": p.telefon || "",
+          "Gremium": memberships.map(m => gremiumName(m.gremiumId)).join("; "),
+          "Funktion": memberships.map(m => m.funktion).filter(Boolean).join("; "),
+          "Notiz": p.notiz || ""
+        };
+      }).sort((a, b) => String(a.Nachname).localeCompare(String(b.Nachname)) || String(a.Vorname).localeCompare(String(b.Vorname)));
+    }
+
+    function exportPersonenCsv() {
+      downloadCsv("personenliste.csv", personenListRows());
+    }
+
+    function printPersonenListe() {
+      const rows = personenListRows();
+      const headers = Object.keys(rows[0] || { "Nachname": "", "Vorname": "", "E-Mail": "", "Telefon": "", "Gremium": "", "Funktion": "", "Notiz": "" });
+      const htmlRows = rows.map(row => `<tr>${headers.map(h => `<td>${esc(row[h])}</td>`).join("")}</tr>`).join("");
+      const printHtml = `<!doctype html>
+        <html lang="de"><head><meta charset="utf-8"><title>Personenliste</title>
+        <style>
+          @page { size: landscape; margin: 12mm; }
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; color: #1f2724; margin: 24px; }
+          h1 { font-size: 20px; margin: 0 0 6px; }
+          p { margin: 0 0 16px; color: #61706a; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+          th, td { border: 1px solid #cfd8d3; padding: 5px 6px; text-align: left; vertical-align: top; overflow-wrap: break-word; word-break: normal; }
+          th { background: #eef3f0; }
+          thead { display: table-header-group; }
+          tr { break-inside: avoid; }
+          @media print { body { margin: 0; } }
+        </style></head><body>
+        <h1>Personenliste</h1>
+        <p>Stand: ${today()} - ${rows.length} Einträge</p>
+        <table><thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${htmlRows || `<tr><td colspan="${headers.length}">Keine Einträge vorhanden.</td></tr>`}</tbody></table>
+        <script>window.onload = () => window.print();<\/script>
+        </body></html>`;
+      openPrintableDocument(printHtml, "Das PDF-Fenster konnte nicht geöffnet werden. Bitte Popups für diese Datei erlauben.");
     }
 
     function personTemplateCsv() {
